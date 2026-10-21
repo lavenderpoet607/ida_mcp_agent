@@ -108,6 +108,7 @@ ida_mcp_agent/
 ├── requirements.txt          Daftar dependensi Python
 ├── rea_agent.py              Plugin IDA Pro (MCP Server + Qt Dashboard UI)
 ├── reclass_mcp_server.py     Server MCP Bridge untuk ReClass.NET
+├── idapythonrc.py            Script Auto-Load Startup IDA Pro
 ├── ida-mcp.json              Template konfigurasi MCP untuk Antigravity/Cursor
 ├── ida_agent_config.json     Konfigurasi model AI internal plugin IDA
 ├── ida_client.py             Modul client Python untuk berinteraksi dengan IDA MCP

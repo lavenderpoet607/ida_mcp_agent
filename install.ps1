@@ -66,7 +66,8 @@ if (-not $isLocal) {
     $filesToDownload = @(
         @{ Url = "$rawBase/rea_agent.py"; Out = (Join-Path $InstallDir "rea_agent.py") },
         @{ Url = "$rawBase/ida_agent_config.json"; Out = (Join-Path $InstallDir "ida_agent_config.json") },
-        @{ Url = "$rawBase/ida-mcp.json"; Out = (Join-Path $InstallDir "ida-mcp.json") }
+        @{ Url = "$rawBase/ida-mcp.json"; Out = (Join-Path $InstallDir "ida-mcp.json") },
+        @{ Url = "$rawBase/idapythonrc.py"; Out = (Join-Path $InstallDir "idapythonrc.py") }
     )
 
     if ($enableReclass) {
@@ -137,18 +138,36 @@ foreach ($root in $searchRoots) {
 }
 
 $sourcePlugin = Join-Path $baseDir "rea_agent.py"
+$sourceConfig = Join-Path $baseDir "ida_agent_config.json"
+$sourceRc = Join-Path $baseDir "idapythonrc.py"
 $uniqueIdaTargets = $idaPluginTargets | Select-Object -Unique
 foreach ($targetDir in $uniqueIdaTargets) {
     Copy-Item -Path $sourcePlugin -Destination (Join-Path $targetDir "rea_agent.py") -Force
+    if (Test-Path $sourceConfig) {
+        Copy-Item -Path $sourceConfig -Destination (Join-Path $targetDir "ida_agent_config.json") -Force
+    }
     Write-Host "  [+] IDA Plugin terpasang di: $targetDir\rea_agent.py" -ForegroundColor Green
     $cfgPath = Join-Path $targetDir "plugins.cfg"
     if (Test-Path $cfgPath) {
-        $cfgText = Get-Content $cfgPath -Raw
-        if ($cfgText -notmatch "rea_agent\.py") {
-            Add-Content -Path $cfgPath -Value "`nMCP_Dashboard rea_agent.py 0 0"
-            Write-Host "  [+] Entri MCP_Dashboard ditambahkan ke plugins.cfg" -ForegroundColor Green
+        $cfgLines = Get-Content $cfgPath
+        $newCfg = $cfgLines | Where-Object { $_ -notmatch 'MCP_Dashboard' }
+        $newCfg += "MCP_Dashboard rea_agent Ctrl-Alt-M 0 GUI SILENT"
+        $newCfg | Set-Content $cfgPath -Encoding ascii
+        Write-Host "  [+] Entri MCP_Dashboard diperbarui di plugins.cfg" -ForegroundColor Green
+    }
+    $idaParent = Split-Path -Parent $targetDir
+    if (Test-Path $sourceRc) {
+        Copy-Item -Path $sourceRc -Destination (Join-Path $idaParent "idapythonrc.py") -Force
+        $idaPyDir = Join-Path $idaParent "python"
+        if (Test-Path $idaPyDir) {
+            Copy-Item -Path $sourceRc -Destination (Join-Path $idaPyDir "idapythonrc.py") -Force
         }
     }
+}
+$appDataRoot = "$env:APPDATA\Hex-Rays\IDA Pro"
+if ((Test-Path $sourceRc) -and (Test-Path $appDataRoot)) {
+    Copy-Item -Path $sourceRc -Destination (Join-Path $appDataRoot "idapythonrc.py") -Force
+    Write-Host "  [+] Auto-load terpasang di: $appDataRoot\idapythonrc.py" -ForegroundColor Green
 }
 
 if ($enableReclass) {

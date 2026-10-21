@@ -6315,9 +6315,17 @@ class McpDashboardTab(ida_kernwin.PluginForm):
 
 ReaAgentTab = McpDashboardTab
 
+_UI_Hooks_Base = getattr(ida_kernwin, "UI_Hooks", object)
+
 class McpUIHooks(_UI_Hooks_Base):
     def ready_to_run(self):
         show_mcp_dashboard()
+
+    def database_inited(self, is_new_database, idc_script):
+        if QtCore and QtWidgets:
+            QtCore.QTimer.singleShot(400, show_mcp_dashboard)
+        else:
+            show_mcp_dashboard()
 
     def screen_ea_changed(self, ea, prev_ea):
         McpDashboardState.on_ea_changed(ea)
@@ -6333,6 +6341,12 @@ def show_mcp_dashboard():
         try:
             if not QtWidgets:
                 return 0
+            existing = ida_kernwin.find_widget("MCP Dashboard")
+            if existing:
+                ida_kernwin.activate_widget(existing, True)
+                if hasattr(McpDashboardState.tab_instance, "refresh_all"):
+                    McpDashboardState.tab_instance.refresh_all()
+                return 1
             McpDashboardState.tab_instance = McpDashboardTab()
             flags = ida_kernwin.PluginForm.WOPN_RESTORE | ida_kernwin.PluginForm.WOPN_DP_RIGHT
             res = McpDashboardState.tab_instance.Show("MCP Dashboard", options=flags)
@@ -6376,8 +6390,8 @@ def register_mcp_actions():
 
 register_rea_action = register_mcp_actions
 
-class MCP(idaapi.plugin_t):
-    flags = idaapi.PLUGIN_KEEP | 0x0040
+class MCP(ida_idaapi.plugin_t):
+    flags = ida_idaapi.PLUGIN_FIX
     comment = "IDA Pro MCP Server Dashboard & AI Agent Bridge"
     help = "MCP Dashboard"
     wanted_name = "MCP Dashboard"
@@ -6385,9 +6399,12 @@ class MCP(idaapi.plugin_t):
 
     def init(self):
         register_mcp_actions()
-        self.server = Server()
-        self.server.start()
-        McpDashboardState.server = self.server
+        if not (McpDashboardState.server and McpDashboardState.server.running):
+            self.server = Server()
+            self.server.start()
+            McpDashboardState.server = self.server
+        else:
+            self.server = McpDashboardState.server
 
         try:
             self.ui_hooks = McpUIHooks()
@@ -6397,10 +6414,12 @@ class MCP(idaapi.plugin_t):
             pass
 
         if QtCore and QtWidgets:
-            QtCore.QTimer.singleShot(600, show_mcp_dashboard)
+            QtCore.QTimer.singleShot(500, show_mcp_dashboard)
+        else:
+            show_mcp_dashboard()
 
         print("[MCP Dashboard] Plugin loaded successfully (http://127.0.0.1:13337/mcp)")
-        return idaapi.PLUGIN_KEEP
+        return ida_idaapi.PLUGIN_KEEP
 
     def run(self, arg):
         show_mcp_dashboard()
@@ -6418,15 +6437,16 @@ def PLUGIN_ENTRY():
     return MCP()
 
 try:
-    if "ida_idaapi" in sys.modules:
+    if "ida_idaapi" in sys.modules or "idaapi" in sys.modules:
         register_mcp_actions()
         if not (McpDashboardState.server and McpDashboardState.server.running):
             _direct_srv = Server()
             _direct_srv.start()
             McpDashboardState.server = _direct_srv
-        show_mcp_dashboard()
         if QtCore and QtWidgets:
             QtCore.QTimer.singleShot(400, show_mcp_dashboard)
-        print("[MCP Dashboard] Launched MCP Dashboard Tab!")
+        else:
+            show_mcp_dashboard()
+        print("[MCP Dashboard] Auto-loaded MCP Server and Dashboard!")
 except Exception as _ex:
     print(f"[MCP Dashboard] Startup notification: {_ex}")
