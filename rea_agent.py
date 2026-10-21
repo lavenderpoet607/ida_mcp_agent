@@ -2494,7 +2494,11 @@ DASHBOARD_I18N = {
         "ask_placeholder": "Ask {agent}: e.g. 'How to bypass this check?', 'Explain the CFF logic'...",
         "ask_btn": "Ask {agent}",
         "copy_c_code": "Copy C Code",
-        "save_c_file": "Save to ida_current_function.c",
+        "save_c_file": "Save C File...",
+        "file_picker_lbl": "Workspace / Config:",
+        "file_picker_mcp": "MCP Config File (ida-mcp.json):",
+        "file_picker_script": "Runner Script File (agent_runner.py):",
+        "browse_file_btn": "Browse File...",
         "c_copied": "Pseudocode copied to clipboard!",
         "c_saved": "Saved & Exported '{name}'!",
         "callers_header": "Callers ({count} functions calling this):",
@@ -2601,7 +2605,11 @@ DASHBOARD_I18N = {
         "ask_placeholder": "Tanya {agent}: misal 'Bagaimana cara bypass pemeriksaan ini?', 'Jelaskan logika CFF'...",
         "ask_btn": "Tanya {agent}",
         "copy_c_code": "Salin Kode C",
-        "save_c_file": "Simpan ke ida_current_function.c",
+        "save_c_file": "Simpan File C...",
+        "file_picker_lbl": "Workspace / Konfigurasi:",
+        "file_picker_mcp": "File Konfigurasi MCP (ida-mcp.json):",
+        "file_picker_script": "File Skrip Runner (agent_runner.py):",
+        "browse_file_btn": "Pilih File...",
         "c_copied": "Kode semu berhasil disalin ke papan klip!",
         "c_saved": "Berhasil menyimpan dan mengekspor '{name}'!",
         "callers_header": "Pemanggil ({count} fungsi memanggil ini):",
@@ -2668,22 +2676,24 @@ class McpDashboardState:
     rpc_stats = {}
     current_language = "en"
 
-    session_file_path = r"c:\Users\user\Documents\project\ida_active_session.json"
-    func_export_file = r"c:\Users\user\Documents\project\ida_current_function.c"
-    context_export_file = r"c:\Users\user\Documents\project\ida_agent_context.json"
-    chat_file_path = r"c:\Users\user\Documents\project\ida_agent_chat.json"
-    config_file_path = r"c:\Users\user\Documents\project\ida_agent_config.json"
+    workspace_dir = ""
+    session_file_path = ""
+    func_export_file = ""
+    context_export_file = ""
+    chat_file_path = ""
+    config_file_path = ""
 
     agent_config = {
         "active_agent": "Antigravity",
         "language": "en",
+        "workspace_dir": "",
         "agents": {
             "Antigravity": {
                 "name": "Antigravity Agent",
                 "tag": "Google DeepMind AGY",
                 "type": "external_mcp",
                 "desc": "Autonomous Pair-Programming & RE Agent connecting via ida-mcp.json",
-                "config_file": "c:\\Users\\user\\Documents\\project\\ida-mcp.json",
+                "config_file": "",
                 "instructions": "Running with Antigravity. Prompts and context are synced automatically to project files."
             },
             "Claude": {
@@ -2717,11 +2727,127 @@ class McpDashboardState:
                 "name": "ida_mcp_agent (Python)",
                 "tag": "Autonomous Script",
                 "type": "local_script",
-                "script_path": r"c:\Users\user\Documents\project\ida_mcp_agent\agent_runner.py",
+                "script_path": "",
                 "desc": "Local autonomous pointer resolver & decompilation agent"
             }
         }
     }
+
+    @classmethod
+    def get_default_workspace_dir(cls) -> str:
+        if cls.workspace_dir and os.path.isdir(cls.workspace_dir):
+            return cls.workspace_dir
+        saved_dir = cls.agent_config.get("workspace_dir", "")
+        if saved_dir and os.path.isdir(saved_dir):
+            cls.workspace_dir = saved_dir
+            return saved_dir
+        try:
+            import idaapi
+            input_file = idaapi.get_input_file_path()
+            if input_file and os.path.isfile(input_file):
+                input_dir = os.path.dirname(os.path.abspath(input_file))
+                if os.path.isdir(input_dir):
+                    cls.workspace_dir = input_dir
+                    return input_dir
+        except Exception:
+            pass
+        this_dir = os.path.dirname(os.path.abspath(__file__))
+        if os.path.basename(this_dir).lower() == "plugins":
+            doc_proj = os.path.expanduser(r"~\Documents\project\ida_mcp_agent")
+            if os.path.isdir(doc_proj):
+                cls.workspace_dir = doc_proj
+                return doc_proj
+            doc_base = os.path.expanduser(r"~\Documents\project")
+            if os.path.isdir(doc_base):
+                cls.workspace_dir = doc_base
+                return doc_base
+            parent_dir = os.path.dirname(this_dir)
+            if os.path.isdir(parent_dir):
+                cls.workspace_dir = parent_dir
+                return parent_dir
+        cls.workspace_dir = this_dir
+        return this_dir
+
+    @classmethod
+    def set_workspace_dir(cls, dir_path: str):
+        if dir_path and os.path.isdir(dir_path):
+            cls.workspace_dir = os.path.abspath(dir_path)
+            cls.agent_config["workspace_dir"] = cls.workspace_dir
+            cls.sync_runtime_paths()
+            cls.save_agent_config()
+
+    @classmethod
+    def get_mcp_config_file(cls) -> str:
+        antigravity_cfg = cls.agent_config.get("agents", {}).get("Antigravity", {})
+        cfg_file = antigravity_cfg.get("config_file", "")
+        if cfg_file:
+            return cfg_file
+        ws = cls.get_default_workspace_dir()
+        candidate = os.path.join(ws, "ida-mcp.json")
+        if os.path.isfile(candidate):
+            return candidate
+        parent_candidate = os.path.join(os.path.dirname(ws), "ida-mcp.json")
+        if os.path.isfile(parent_candidate):
+            return parent_candidate
+        return candidate
+
+    @classmethod
+    def set_mcp_config_file(cls, file_path: str):
+        if not file_path:
+            return
+        abs_path = os.path.abspath(file_path)
+        if "Antigravity" not in cls.agent_config.get("agents", {}):
+            cls.agent_config.setdefault("agents", {})["Antigravity"] = {}
+        cls.agent_config["agents"]["Antigravity"]["config_file"] = abs_path
+        ws = os.path.dirname(abs_path)
+        if os.path.isdir(ws):
+            cls.workspace_dir = ws
+            cls.agent_config["workspace_dir"] = ws
+        cls.sync_runtime_paths()
+        cls.save_agent_config()
+
+    @classmethod
+    def get_script_path(cls) -> str:
+        script_cfg = cls.agent_config.get("agents", {}).get("Local_Script", {})
+        s_path = script_cfg.get("script_path", "")
+        if s_path:
+            return s_path
+        ws = cls.get_default_workspace_dir()
+        candidate = os.path.join(ws, "agent_runner.py")
+        if os.path.isfile(candidate):
+            return candidate
+        this_dir = os.path.dirname(os.path.abspath(__file__))
+        candidate2 = os.path.join(this_dir, "agent_runner.py")
+        if os.path.isfile(candidate2):
+            return candidate2
+        sub_candidate = os.path.join(ws, "ida_mcp_agent", "agent_runner.py")
+        if os.path.isfile(sub_candidate):
+            return sub_candidate
+        return s_path if s_path else candidate
+
+    @classmethod
+    def set_script_path(cls, file_path: str):
+        if not file_path:
+            return
+        abs_path = os.path.abspath(file_path)
+        if "Local_Script" not in cls.agent_config.get("agents", {}):
+            cls.agent_config.setdefault("agents", {})["Local_Script"] = {}
+        cls.agent_config["agents"]["Local_Script"]["script_path"] = abs_path
+        ws = os.path.dirname(abs_path)
+        if os.path.isdir(ws):
+            cls.workspace_dir = ws
+            cls.agent_config["workspace_dir"] = ws
+        cls.sync_runtime_paths()
+        cls.save_agent_config()
+
+    @classmethod
+    def sync_runtime_paths(cls):
+        ws = cls.get_default_workspace_dir()
+        cls.session_file_path = os.path.join(ws, "ida_active_session.json")
+        cls.func_export_file = os.path.join(ws, "ida_current_function.c")
+        cls.context_export_file = os.path.join(ws, "ida_agent_context.json")
+        cls.chat_file_path = os.path.join(ws, "ida_agent_chat.json")
+        cls.config_file_path = os.path.join(ws, "ida_agent_config.json")
 
     _SECRET_SALT = "ida_pro_mcp_salt_secure_2026"
     _models_cache = {}
@@ -3018,9 +3144,24 @@ class McpDashboardState:
     @classmethod
     def load_agent_config(cls):
         try:
-            if os.path.isfile(cls.config_file_path):
-                with open(cls.config_file_path, "r", encoding="utf-8") as f:
+            candidates = [
+                cls.config_file_path,
+                os.path.join(cls.get_default_workspace_dir(), "ida_agent_config.json"),
+                os.path.expanduser(r"~\Documents\project\ida_mcp_agent\ida_agent_config.json"),
+                os.path.expanduser(r"~\Documents\project\ida_agent_config.json"),
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "ida_agent_config.json")
+            ]
+            cfg_file = None
+            for p in candidates:
+                if p and os.path.isfile(p):
+                    cfg_file = p
+                    break
+            if cfg_file:
+                cls.config_file_path = cfg_file
+                with open(cfg_file, "r", encoding="utf-8") as f:
                     saved = json.load(f)
+                    if "workspace_dir" in saved and os.path.isdir(saved["workspace_dir"]):
+                        cls.workspace_dir = saved["workspace_dir"]
                     if "language" in saved and saved["language"] in ("en", "id"):
                         cls.current_language = saved["language"]
                         cls.agent_config["language"] = saved["language"]
@@ -3039,14 +3180,17 @@ class McpDashboardState:
                     direct_cfg["api_key_masked"] = raw_k[:3] + "***" + raw_k[-3:] if len(raw_k) >= 7 else "***"
                     del direct_cfg["api_key"]
                     cls.save_agent_config()
+            cls.sync_runtime_paths()
         except Exception:
             pass
 
     @classmethod
     def save_agent_config(cls):
         try:
+            cls.sync_runtime_paths()
             os.makedirs(os.path.dirname(cls.config_file_path), exist_ok=True)
             cls.agent_config["language"] = cls.get_language()
+            cls.agent_config["workspace_dir"] = cls.get_default_workspace_dir()
             with open(cls.config_file_path, "w", encoding="utf-8") as f:
                 json.dump(cls.agent_config, f, indent=2)
         except Exception:
@@ -4116,6 +4260,8 @@ Interceptor.attach(ptr("{ea_str}"), {{
         if cls.tab_instance and hasattr(cls.tab_instance, "refresh_cursor_info"):
             cls.tab_instance.refresh_cursor_info(ea)
 
+McpDashboardState.sync_runtime_paths()
+
 DASHBOARD_QSS = """
 QFrame#cardPanel {
     background-color: #11151D;
@@ -4489,6 +4635,11 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         self.a_sub = None
         self.sel_agent_lbl = None
         self.agent_combo = None
+        self.file_picker_container = None
+        self.file_picker_lbl = None
+        self.file_path_input = None
+        self.browse_file_btn = None
+        self._updating_file_path = False
         self.agent_desc_box = None
         self.custom_agent_panel = None
         self.copy_agent_cfg_btn = None
@@ -4706,6 +4857,14 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             self.save_agent_cfg_btn.setText(t("save_agent_pref"))
         if self.run_local_agent_btn:
             self.run_local_agent_btn.setText(t("run_local_agent"))
+        if self.file_picker_lbl:
+            active_k = McpDashboardState.get_active_agent_key()
+            if active_k == "Local_Script":
+                self.file_picker_lbl.setText(t("file_picker_script"))
+            else:
+                self.file_picker_lbl.setText(t("file_picker_mcp"))
+        if self.browse_file_btn:
+            self.browse_file_btn.setText(t("browse_file_btn"))
         if self.t_title:
             self.t_title.setText(t("tools_catalog_title"))
         if self.cat_lbl:
@@ -4894,6 +5053,26 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         sel_row.addWidget(self.agent_combo)
         sel_row.addStretch()
         agent_layout.addLayout(sel_row)
+
+        self.file_picker_container = QtWidgets.QWidget()
+        file_picker_layout = QtWidgets.QHBoxLayout(self.file_picker_container)
+        file_picker_layout.setContentsMargins(0, 0, 0, 0)
+        file_picker_layout.setSpacing(8)
+
+        self.file_picker_lbl = QtWidgets.QLabel(McpDashboardState.t("file_picker_lbl"))
+        self.file_picker_lbl.setStyleSheet("font-weight: 600; color: #E8EDF5;")
+        file_picker_layout.addWidget(self.file_picker_lbl)
+
+        self.file_path_input = QtWidgets.QLineEdit()
+        self.file_path_input.setStyleSheet("background-color: #171D28; border: 1px solid #283142; border-radius: 4px; padding: 4px 8px; color: #38BDF8; font-family: monospace; font-size: 11px;")
+        self.file_path_input.textChanged.connect(self.on_file_path_text_changed)
+        file_picker_layout.addWidget(self.file_path_input)
+
+        self.browse_file_btn = QtWidgets.QPushButton(McpDashboardState.t("browse_file_btn"))
+        self.browse_file_btn.clicked.connect(self.on_browse_file_clicked)
+        file_picker_layout.addWidget(self.browse_file_btn)
+
+        agent_layout.addWidget(self.file_picker_container)
 
         self.agent_desc_box = QtWidgets.QTextEdit()
         self.agent_desc_box.setReadOnly(True)
@@ -5101,7 +5280,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         c_toolbar.addWidget(self.copy_c_btn)
 
         self.save_c_btn = QtWidgets.QPushButton(McpDashboardState.t("save_c_file"))
-        self.save_c_btn.clicked.connect(self.on_send_func)
+        self.save_c_btn.clicked.connect(self.on_save_c_file)
         c_toolbar.addWidget(self.save_c_btn)
 
         self.c_status_lbl = QtWidgets.QLabel("")
@@ -5928,6 +6107,8 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             info = McpDashboardState.get_active_agent_info()
 
         if agent_key == "Direct_API":
+            if self.file_picker_container:
+                self.file_picker_container.setVisible(False)
             if self.custom_agent_panel:
                 self.custom_agent_panel.setVisible(True)
             if self.agent_desc_box:
@@ -5948,16 +6129,37 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         if not self.agent_desc_box:
             return
 
+        mcp_cfg_file = McpDashboardState.get_mcp_config_file() if "McpDashboardState" in globals() else ""
+        script_run_file = McpDashboardState.get_script_path() if "McpDashboardState" in globals() else ""
+        ctx_export = os.path.basename(McpDashboardState.context_export_file) if "McpDashboardState" in globals() and McpDashboardState.context_export_file else "ida_agent_context.json"
+        func_export = os.path.basename(McpDashboardState.func_export_file) if "McpDashboardState" in globals() and McpDashboardState.func_export_file else "ida_current_function.c"
+
+        if self.file_picker_container:
+            if agent_key in ("Antigravity", "Local_Script"):
+                self.file_picker_container.setVisible(True)
+                if self.file_picker_lbl:
+                    if agent_key == "Local_Script":
+                        self.file_picker_lbl.setText(McpDashboardState.t("file_picker_script"))
+                    else:
+                        self.file_picker_lbl.setText(McpDashboardState.t("file_picker_mcp"))
+                if self.file_path_input:
+                    self._updating_file_path = True
+                    cur_val = script_run_file if agent_key == "Local_Script" else mcp_cfg_file
+                    self.file_path_input.setText(cur_val)
+                    self._updating_file_path = False
+            else:
+                self.file_picker_container.setVisible(False)
+
         lang = McpDashboardState.get_language()
         if lang == "id":
             if agent_key == "Antigravity":
                 text = (
                     "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Agen Antigravity (Google DeepMind)</div>"
                     "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
-                    "• Konfigurasi Klien MCP: <span style='font-family: monospace; color: #38BDF8;'>c:\\Users\\user\\Documents\\project\\ida-mcp.json</span><br/>"
+                    f"• Konfigurasi Klien MCP: <span style='font-family: monospace; color: #38BDF8;'>{mcp_cfg_file}</span><br/>"
                     "• Antigravity terhubung langsung ke IDA Pro melalui endpoint: <span style='font-family: monospace; color: #34D399;'>http://127.0.0.1:13337/mcp</span><br/>"
                     "• Klik <b>'Salin Konfigurasi Agen'</b> untuk menyalin konfigurasi JSON server Antigravity.<br/>"
-                    "• Konteks analisis disinkronkan otomatis ke <span style='font-family: monospace; color: #38BDF8;'>ida_agent_context.json</span> & <span style='font-family: monospace; color: #38BDF8;'>ida_current_function.c</span>."
+                    f"• Konteks analisis disinkronkan otomatis ke <span style='font-family: monospace; color: #38BDF8;'>{ctx_export}</span> & <span style='font-family: monospace; color: #38BDF8;'>{func_export}</span>."
                     "</div>"
                 )
                 self.copy_agent_cfg_btn.setVisible(True)
@@ -5997,7 +6199,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                 text = (
                     "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Skrip Otonom (ida_mcp_agent)</div>"
                     "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
-                    "• Eksekutor Skrip: <span style='font-family: monospace; color: #38BDF8;'>c:\\Users\\user\\Documents\\project\\ida_mcp_agent\\agent_runner.py</span><br/>"
+                    f"• Eksekutor Skrip: <span style='font-family: monospace; color: #38BDF8;'>{script_run_file}</span><br/>"
                     "• Menyelesaikan pointer, memetakan referensi silang, dan menambahkan anotasi ke database IDA Pro secara otomatis.<br/>"
                     "• Klik <b>'Jalankan ida_mcp_agent'</b> untuk memicu analisis otomatis pada fungsi aktif."
                     "</div>"
@@ -6017,10 +6219,10 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                 text = (
                     "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Antigravity Agent (Google DeepMind)</div>"
                     "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
-                    "• MCP Client Configuration: <span style='font-family: monospace; color: #38BDF8;'>c:\\Users\\user\\Documents\\project\\ida-mcp.json</span><br/>"
+                    f"• MCP Client Configuration: <span style='font-family: monospace; color: #38BDF8;'>{mcp_cfg_file}</span><br/>"
                     "• Antigravity connects directly to IDA Pro via endpoint: <span style='font-family: monospace; color: #34D399;'>http://127.0.0.1:13337/mcp</span><br/>"
                     "• Click <b>'Copy Agent Config'</b> to copy the Antigravity server JSON configuration.<br/>"
-                    "• Analysis context is automatically synced to <span style='font-family: monospace; color: #38BDF8;'>ida_agent_context.json</span> & <span style='font-family: monospace; color: #38BDF8;'>ida_current_function.c</span>."
+                    f"• Analysis context is automatically synced to <span style='font-family: monospace; color: #38BDF8;'>{ctx_export}</span> & <span style='font-family: monospace; color: #38BDF8;'>{func_export}</span>."
                     "</div>"
                 )
                 self.copy_agent_cfg_btn.setVisible(True)
@@ -6060,7 +6262,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                 text = (
                     "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Autonomous Script (ida_mcp_agent)</div>"
                     "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
-                    "• Script Runner: <span style='font-family: monospace; color: #38BDF8;'>c:\\Users\\user\\Documents\\project\\ida_mcp_agent\\agent_runner.py</span><br/>"
+                    f"• Script Runner: <span style='font-family: monospace; color: #38BDF8;'>{script_run_file}</span><br/>"
                     "• Resolves pointers, maps cross-references, and adds annotations into the IDA Pro database automatically.<br/>"
                     "• Click <b>'Run ida_mcp_agent'</b> to trigger autonomous analysis on the active function."
                     "</div>"
@@ -6077,6 +6279,94 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                 self.save_agent_cfg_btn.setVisible(True)
 
         self.agent_desc_box.setHtml(text)
+
+    def on_browse_file_clicked(self):
+        if not QtWidgets:
+            return
+        agent_key = McpDashboardState.get_active_agent_key()
+        default_dir = McpDashboardState.get_default_workspace_dir()
+        lang = McpDashboardState.get_language()
+
+        if agent_key == "Local_Script":
+            title = "Pilih File Skrip Runner (agent_runner.py)" if lang == "id" else "Select Runner Script File (agent_runner.py)"
+            filter_str = "Python Files (*.py);;All Files (*.*)"
+            cur_path = McpDashboardState.get_script_path()
+            start_dir = os.path.dirname(cur_path) if cur_path and os.path.isfile(cur_path) else default_dir
+            file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self.parent if hasattr(self, "parent") and self.parent else None,
+                title,
+                start_dir,
+                filter_str
+            )
+            if file_path:
+                McpDashboardState.set_script_path(file_path)
+                self._updating_file_path = True
+                if self.file_path_input:
+                    self.file_path_input.setText(file_path)
+                self._updating_file_path = False
+                self.update_agent_view()
+                McpDashboardState.log_event("ui_action", f"Selected script runner file: {file_path}")
+        else:
+            title = "Pilih File Konfigurasi MCP (ida-mcp.json)" if lang == "id" else "Select MCP Config File (ida-mcp.json)"
+            filter_str = "JSON Files (*.json);;All Files (*.*)"
+            cur_path = McpDashboardState.get_mcp_config_file()
+            start_dir = os.path.dirname(cur_path) if cur_path and os.path.isfile(cur_path) else default_dir
+            file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self.parent if hasattr(self, "parent") and self.parent else None,
+                title,
+                start_dir,
+                filter_str
+            )
+            if file_path:
+                McpDashboardState.set_mcp_config_file(file_path)
+                self._updating_file_path = True
+                if self.file_path_input:
+                    self.file_path_input.setText(file_path)
+                self._updating_file_path = False
+                self.update_agent_view()
+                McpDashboardState.log_event("ui_action", f"Selected MCP config file: {file_path}")
+
+    def on_file_path_text_changed(self, text):
+        if getattr(self, "_updating_file_path", False):
+            return
+        t = text.strip()
+        if not t:
+            return
+        agent_key = McpDashboardState.get_active_agent_key()
+        if agent_key == "Local_Script":
+            McpDashboardState.set_script_path(t)
+        else:
+            McpDashboardState.set_mcp_config_file(t)
+
+    def on_save_c_file(self):
+        if not QtWidgets:
+            return
+        code = self.code_viewer.toPlainText() if self.code_viewer else ""
+        if not code.strip():
+            return
+        default_dir = McpDashboardState.get_default_workspace_dir()
+        func_info = McpDashboardState.get_current_function_details()
+        fname = func_info.get("name", "func") if func_info else "func"
+        default_file = os.path.join(default_dir, f"{fname}.c")
+        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self.parent if hasattr(self, "parent") and self.parent else None,
+            McpDashboardState.t("save_c_file"),
+            default_file,
+            "C Source Files (*.c);;All Files (*.*)"
+        )
+        if file_path:
+            try:
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(code)
+                McpDashboardState.func_export_file = file_path
+                McpDashboardState.log_event("ui_action", f"Saved C file to: {file_path}")
+                if self.c_status_lbl:
+                    lang = McpDashboardState.get_language()
+                    msg = f"Tersimpan: {os.path.basename(file_path)}" if lang == "id" else f"Saved: {os.path.basename(file_path)}"
+                    self.c_status_lbl.setText(msg)
+            except Exception as e:
+                McpDashboardState.log_event("agent_error", f"Save C file error: {e}")
 
     def on_copy_agent_config(self):
         agent_key = "Antigravity"
@@ -6117,7 +6407,8 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         if "McpDashboardState" in globals():
             func_info = McpDashboardState.get_current_function_details()
         target_addr = func_info["start"] if func_info and "start" in func_info else "0x1d88ec"
-        script_path = r"c:\Users\user\Documents\project\ida_mcp_agent\agent_runner.py"
+        script_path = McpDashboardState.get_script_path() if "McpDashboardState" in globals() else ""
+        run_cwd = os.path.dirname(script_path) if script_path and os.path.isfile(script_path) else (McpDashboardState.get_default_workspace_dir() if "McpDashboardState" in globals() else "")
 
         if "McpDashboardState" in globals():
             McpDashboardState.log_event("agent_call", f"Launching ida_mcp_agent for {target_addr}...")
@@ -6130,7 +6421,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True,
-                    cwd=r"c:\Users\user\Documents\project\ida_mcp_agent"
+                    cwd=run_cwd if run_cwd else None
                 )
                 for line in p.stdout:
                     l = line.strip()

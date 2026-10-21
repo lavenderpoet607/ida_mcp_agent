@@ -1,17 +1,18 @@
 {
   "active_agent": "Antigravity",
   "language": "en",
+  "workspace_dir": "",
   "agents": {
     "Antigravity": {
       "name": "Antigravity Agent",
       "tag": "Google DeepMind AGY",
       "type": "external_mcp",
       "desc": "Autonomous Pair-Programming & RE Agent connecting via ida-mcp.json",
-      "config_file": "c:\\Users\\user\\Documents\\project\\ida-mcp.json",
+      "config_file": "",
       "instructions": "Running with Antigravity. Prompts and context are synced automatically to project files."
     },
     "Claude": {
-      "name": "Claude Desktop / Claude Code",
+      "name": "Claude Desktop / Code",
       "tag": "Anthropic Claude 3.7",
       "type": "external_mcp",
       "desc": "Anthropic Claude connected via claude_desktop_config.json",
@@ -19,7 +20,7 @@
       "instructions": "Add the MCP server block to claude_desktop_config.json, then restart Claude."
     },
     "Cursor": {
-      "name": "Cursor IDE / Windsurf",
+      "name": "Cursor / Windsurf",
       "tag": "Cursor IDE",
       "type": "external_mcp",
       "desc": "AI Editor with built-in MCP Client support",
@@ -41,7 +42,7 @@
       "name": "ida_mcp_agent (Python)",
       "tag": "Autonomous Script",
       "type": "local_script",
-      "script_path": "c:\\Users\\user\\Documents\\project\\ida_mcp_agent\\agent_runner.py",
+      "script_path": "",
       "desc": "Local autonomous pointer resolver & decompilation agent"
     }
   }
