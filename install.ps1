@@ -29,10 +29,19 @@ Write-Host "[2/5] Menginstall Python dependencies..." -ForegroundColor Yellow
 Write-Host "[2/5] Dependencies berhasil diinstall." -ForegroundColor Green
 
 if (-not $InstallDir) {
-    if ($PSScriptRoot) {
+    if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "rea_agent.py"))) {
         $InstallDir = $PSScriptRoot
+    } elseif (Test-Path "$env:USERPROFILE\Documents\project\ida_mcp_agent\rea_agent.py") {
+        $InstallDir = "$env:USERPROFILE\Documents\project\ida_mcp_agent"
     } else {
-        $InstallDir = Join-Path $PWD.Path "ida_mcp_agent"
+        $winDir = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::Windows)
+        $currentPath = $PWD.Path
+        if (-not $currentPath -or $currentPath.StartsWith($winDir, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $docDir = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::MyDocuments)
+            $InstallDir = Join-Path $docDir "ida_mcp_agent"
+        } else {
+            $InstallDir = Join-Path $currentPath "ida_mcp_agent"
+        }
     }
 }
 
@@ -41,7 +50,11 @@ $baseDir = $InstallDir
 if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "rea_agent.py"))) {
     $isLocal = $true
     $baseDir = $PSScriptRoot
+} elseif (Test-Path (Join-Path $InstallDir "rea_agent.py")) {
+    $isLocal = $true
+    $baseDir = $InstallDir
 }
+
 
 if (-not $isLocal) {
     Write-Host "[3/5] Mengunduh asset dari GitHub: $Repo ($Branch)..." -ForegroundColor Yellow
