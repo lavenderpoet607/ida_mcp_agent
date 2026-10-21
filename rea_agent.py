@@ -4132,14 +4132,14 @@ QTabWidget::pane {
 
 QTabBar::tab {
     background-color: #171D28;
-    color: #94A3B8;
-    font-weight: 600;
+    color: #CBD5E1;
+    font-weight: 700;
     font-size: 11px;
-    padding: 7px 16px;
+    padding: 8px 18px;
     margin-right: 4px;
     border-top-left-radius: 6px;
     border-top-right-radius: 6px;
-    border: 1px solid #283142;
+    border: 1px solid #334155;
     border-bottom: none;
 }
 
@@ -4152,12 +4152,12 @@ QTabBar::tab:selected {
 
 QTabBar::tab:hover:!selected {
     background-color: #1E293B;
-    color: #E2E8F0;
+    color: #FFFFFF;
 }
 
 QPushButton {
     background-color: #1E293B;
-    color: #E2E8F0;
+    color: #F8FAFC;
     border: 1px solid #334155;
     border-radius: 5px;
     padding: 6px 14px;
@@ -4204,17 +4204,111 @@ QPushButton#successAction:hover {
     background-color: #047857;
 }
 
-QLineEdit, QTextEdit, QComboBox {
-    background-color: #171D28;
-    border: 1px solid #283142;
+QLabel {
+    color: #F8FAFC;
+}
+
+QLineEdit, QTextEdit {
+    background-color: #11151D;
+    border: 1px solid #334155;
     border-radius: 5px;
-    padding: 5px 8px;
-    color: #E8EDF5;
+    padding: 6px 10px;
+    color: #F8FAFC;
+    font-size: 12px;
+    selection-background-color: #0284C7;
+    selection-color: #FFFFFF;
+}
+
+QLineEdit:focus, QTextEdit:focus {
+    border: 1px solid #38BDF8;
+    background-color: #171D28;
+}
+
+QComboBox {
+    background-color: #11151D;
+    border: 1px solid #334155;
+    border-radius: 5px;
+    padding: 5px 10px;
+    color: #F8FAFC;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+QComboBox:hover {
+    border: 1px solid #475569;
+}
+
+QComboBox:focus {
+    border: 1px solid #38BDF8;
+    background-color: #171D28;
+}
+
+QComboBox:editable {
+    background-color: #11151D;
+    color: #F8FAFC;
+}
+
+QComboBox QLineEdit {
+    color: #F8FAFC;
+    background-color: transparent;
+    border: none;
+    padding: 0px;
+    font-size: 12px;
+    selection-background-color: #0284C7;
+    selection-color: #FFFFFF;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 26px;
+    border-left: 1px solid #334155;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    background-color: #1E293B;
+}
+
+QComboBox::drop-down:hover {
+    background-color: #334155;
+}
+
+QComboBox::down-arrow {
+    width: 0px;
+    height: 0px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid #38BDF8;
+}
+
+QComboBox QAbstractItemView, QListView, QMenu {
+    background-color: #0F172A;
+    color: #F8FAFC;
+    border: 1px solid #38BDF8;
+    border-radius: 6px;
+    padding: 4px;
+    selection-background-color: #0284C7;
+    selection-color: #FFFFFF;
+    outline: none;
+}
+
+QComboBox QAbstractItemView::item, QListView::item, QComboBox::item {
+    color: #F8FAFC;
+    background-color: transparent;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 4px;
     font-size: 12px;
 }
 
-QLineEdit:focus, QTextEdit:focus, QComboBox:focus {
-    border: 1px solid #38BDF8;
+QComboBox QAbstractItemView::item:hover, QListView::item:hover, QComboBox::item:hover {
+    background-color: #1E293B;
+    color: #38BDF8;
+}
+
+QComboBox QAbstractItemView::item:selected, QListView::item:selected, QComboBox::item:selected {
+    background-color: #0284C7;
+    color: #FFFFFF;
+    font-weight: 600;
 }
 
 QTableWidget {
@@ -4224,7 +4318,7 @@ QTableWidget {
     border-radius: 6px;
     gridline-color: #1E293B;
     font-size: 11px;
-    color: #E8EDF5;
+    color: #F8FAFC;
 }
 
 QTableWidget::item:selected {
@@ -4234,7 +4328,7 @@ QTableWidget::item:selected {
 
 QHeaderView::section {
     background-color: #171D28;
-    color: #94A3B8;
+    color: #E2E8F0;
     font-weight: 700;
     font-size: 11px;
     padding: 6px;
@@ -4317,7 +4411,60 @@ QToolTip {
 }
 """
 
+_StyledItemDelegateBase = QtWidgets.QStyledItemDelegate if QtWidgets else object
+
+class BrightItemDelegate(_StyledItemDelegateBase):
+    def initStyleOption(self, option, index):
+        if hasattr(super(), "initStyleOption"):
+            super().initStyleOption(option, index)
+        if QtGui:
+            option.palette.setColor(QtGui.QPalette.Text, QtGui.QColor("#F8FAFC"))
+            option.palette.setColor(QtGui.QPalette.WindowText, QtGui.QColor("#F8FAFC"))
+            option.palette.setColor(QtGui.QPalette.HighlightedText, QtGui.QColor("#FFFFFF"))
+
 class McpDashboardTab(ida_kernwin.PluginForm):
+    def configure_bright_combo(self, combo):
+        if not combo or not QtWidgets:
+            return
+        view = QtWidgets.QListView()
+        if QtGui:
+            p = view.palette()
+            bright = QtGui.QColor("#F8FAFC")
+            bg = QtGui.QColor("#0F172A")
+            sel_bg = QtGui.QColor("#0284C7")
+            sel_fg = QtGui.QColor("#FFFFFF")
+            p.setColor(QtGui.QPalette.Text, bright)
+            p.setColor(QtGui.QPalette.WindowText, bright)
+            p.setColor(QtGui.QPalette.Base, bg)
+            p.setColor(QtGui.QPalette.Window, bg)
+            p.setColor(QtGui.QPalette.Highlight, sel_bg)
+            p.setColor(QtGui.QPalette.HighlightedText, sel_fg)
+            view.setPalette(p)
+            cp = combo.palette()
+            cp.setColor(QtGui.QPalette.Text, bright)
+            cp.setColor(QtGui.QPalette.WindowText, bright)
+            cp.setColor(QtGui.QPalette.ButtonText, bright)
+            combo.setPalette(cp)
+        view.setStyleSheet(
+            "QListView { background-color: #0F172A; color: #F8FAFC; selection-background-color: #0284C7; selection-color: #FFFFFF; font-size: 12px; border: 1px solid #38BDF8; outline: none; } "
+            "QListView::item { min-height: 26px; padding: 4px 8px; color: #F8FAFC; background-color: transparent; } "
+            "QListView::item:hover { background-color: #1E293B; color: #38BDF8; } "
+            "QListView::item:selected { background-color: #0284C7; color: #FFFFFF; font-weight: 600; }"
+        )
+        try:
+            view.setItemDelegate(BrightItemDelegate(view))
+        except Exception:
+            pass
+        combo.setView(view)
+        le = combo.lineEdit()
+        if le:
+            le.setStyleSheet("background-color: transparent; color: #F8FAFC; font-size: 12px; border: none;")
+            if QtGui:
+                lep = le.palette()
+                lep.setColor(QtGui.QPalette.Text, QtGui.QColor("#F8FAFC"))
+                lep.setColor(QtGui.QPalette.WindowText, QtGui.QColor("#F8FAFC"))
+                le.setPalette(lep)
+
     def __init__(self):
         super().__init__()
         self.parent = None
@@ -4459,12 +4606,13 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         header_bar.addWidget(self.title_lbl)
 
         self.bin_lbl = QtWidgets.QLabel("libanogs.so (ARM64) | 5372 " + McpDashboardState.t("funcs_suffix"))
-        self.bin_lbl.setStyleSheet("color: #94A3B8; font-size: 12px; font-weight: 600; padding: 2px 8px; background-color: #171D28; border: 1px solid #283142; border-radius: 4px;")
+        self.bin_lbl.setStyleSheet("color: #E2E8F0; font-size: 12px; font-weight: 600; padding: 2px 8px; background-color: #171D28; border: 1px solid #283142; border-radius: 4px;")
         header_bar.addWidget(self.bin_lbl)
 
         header_bar.addStretch()
 
         self.lang_combo = QtWidgets.QComboBox()
+        self.configure_bright_combo(self.lang_combo)
         self.lang_combo.addItem("English", "en")
         self.lang_combo.addItem("Bahasa Indonesia", "id")
         cur_lang = McpDashboardState.get_language()
@@ -4685,11 +4833,11 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         metrics_row.addWidget(self.endpoint_badge)
 
         self.proto_badge = QtWidgets.QLabel(McpDashboardState.t("proto_badge"))
-        self.proto_badge.setStyleSheet("background-color: #171D28; border: 1px solid #283142; border-radius: 4px; padding: 5px 10px; color: #94A3B8; font-size: 11px;")
+        self.proto_badge.setStyleSheet("background-color: #171D28; border: 1px solid #283142; border-radius: 4px; padding: 5px 10px; color: #CBD5E1; font-weight: 600; font-size: 11px;")
         metrics_row.addWidget(self.proto_badge)
 
         self.tools_badge = QtWidgets.QLabel(McpDashboardState.t("tools_badge"))
-        self.tools_badge.setStyleSheet("background-color: #171D28; border: 1px solid #283142; border-radius: 4px; padding: 5px 10px; color: #94A3B8; font-size: 11px;")
+        self.tools_badge.setStyleSheet("background-color: #171D28; border: 1px solid #283142; border-radius: 4px; padding: 5px 10px; color: #CBD5E1; font-weight: 600; font-size: 11px;")
         metrics_row.addWidget(self.tools_badge)
 
         self.reqs_badge = QtWidgets.QLabel(McpDashboardState.t("reqs_badge", count=0))
@@ -4718,7 +4866,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         a_top.addWidget(self.a_title)
 
         self.a_sub = QtWidgets.QLabel(McpDashboardState.t("user_agent_cfg_sub"))
-        self.a_sub.setStyleSheet("font-size: 11px; color: #64748B;")
+        self.a_sub.setStyleSheet("font-size: 11px; color: #CBD5E1; font-weight: 500;")
         a_top.addWidget(self.a_sub)
         a_top.addStretch()
         agent_layout.addLayout(a_top)
@@ -4729,6 +4877,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         sel_row.addWidget(self.sel_agent_lbl)
 
         self.agent_combo = QtWidgets.QComboBox()
+        self.configure_bright_combo(self.agent_combo)
         self.agent_combo.addItem("Antigravity Agent (Google DeepMind)", "Antigravity")
         self.agent_combo.addItem("Claude Desktop / Claude Code", "Claude")
         self.agent_combo.addItem("Cursor IDE / Windsurf", "Cursor")
@@ -4791,15 +4940,16 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         t_top.addWidget(self.t_title)
 
         self.tools_count_lbl = QtWidgets.QLabel(McpDashboardState.t("tools_registered_count", count=59))
-        self.tools_count_lbl.setStyleSheet("font-size: 11px; color: #94A3B8; font-weight: 600;")
+        self.tools_count_lbl.setStyleSheet("font-size: 11px; color: #CBD5E1; font-weight: 600;")
         t_top.addWidget(self.tools_count_lbl)
         t_top.addStretch()
 
         self.cat_lbl = QtWidgets.QLabel(McpDashboardState.t("category_lbl"))
-        self.cat_lbl.setStyleSheet("color: #94A3B8; font-size: 12px;")
+        self.cat_lbl.setStyleSheet("color: #F8FAFC; font-size: 12px; font-weight: 600;")
         t_top.addWidget(self.cat_lbl)
 
         self.category_combo = QtWidgets.QComboBox()
+        self.configure_bright_combo(self.category_combo)
         self.category_combo.addItem(McpDashboardState.t("all_categories"), "")
         self.category_combo.addItem(McpDashboardState.t("cat_nav"), "Navigation")
         self.category_combo.addItem(McpDashboardState.t("cat_calls"), "Calls")
@@ -4884,12 +5034,13 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         sel_row.addWidget(self.target_func_lbl)
         self.func_combo = QtWidgets.QComboBox()
         self.func_combo.setEditable(True)
+        self.configure_bright_combo(self.func_combo)
         self.func_combo.setMinimumWidth(320)
         self.func_combo.currentIndexChanged.connect(self.on_combo_func_selected)
         sel_row.addWidget(self.func_combo)
 
         self.func_meta_lbl = QtWidgets.QLabel("")
-        self.func_meta_lbl.setStyleSheet("color: #94A3B8; font-size: 12px; font-family: monospace;")
+        self.func_meta_lbl.setStyleSheet("color: #CBD5E1; font-size: 12px; font-family: monospace; font-weight: 500;")
         sel_row.addWidget(self.func_meta_lbl)
         sel_row.addStretch()
         card_layout.addLayout(sel_row)
@@ -5012,10 +5163,11 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         log_top.addStretch()
 
         self.filter_lbl = QtWidgets.QLabel(McpDashboardState.t("filter_event_lbl"))
-        self.filter_lbl.setStyleSheet("color: #94A3B8; font-size: 12px;")
+        self.filter_lbl.setStyleSheet("color: #F8FAFC; font-size: 12px; font-weight: 600;")
         log_top.addWidget(self.filter_lbl)
 
         self.log_filter_combo = QtWidgets.QComboBox()
+        self.configure_bright_combo(self.log_filter_combo)
         self.log_filter_combo.addItem(McpDashboardState.t("all_events"), "ALL")
         self.log_filter_combo.addItem(McpDashboardState.t("agent_calls"), "agent_call")
         self.log_filter_combo.addItem(McpDashboardState.t("agent_success"), "agent_success")
@@ -5094,7 +5246,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             self.test_conn_btn.setText(McpDashboardState.t("testing_connection"))
         if self.conn_feedback_lbl:
             self.conn_feedback_lbl.setText(McpDashboardState.t("testing_endpoint"))
-            self.conn_feedback_lbl.setStyleSheet("background-color: #1E293B; color: #94A3B8; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;")
+            self.conn_feedback_lbl.setStyleSheet("background-color: #1E293B; color: #CBD5E1; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;")
             self.conn_feedback_lbl.setVisible(True)
 
         result_holder = []
@@ -5221,7 +5373,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         p_header.addWidget(self.p_title)
 
         self.custom_agent_badge = QtWidgets.QLabel(McpDashboardState.t("direct_llm_mode"))
-        self.custom_agent_badge.setStyleSheet("background-color: #1E293B; color: #94A3B8; border: 1px solid #334155; border-radius: 4px; padding: 2px 8px; font-size: 10px; font-weight: 600;")
+        self.custom_agent_badge.setStyleSheet("background-color: #1E293B; color: #CBD5E1; border: 1px solid #334155; border-radius: 4px; padding: 2px 8px; font-size: 10px; font-weight: 600;")
         p_header.addWidget(self.custom_agent_badge)
         p_header.addStretch()
         l.addLayout(p_header)
@@ -5236,6 +5388,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
 
         self.provider_combo = QtWidgets.QComboBox()
         self.provider_combo.setEditable(True)
+        self.configure_bright_combo(self.provider_combo)
         self.provider_combo.addItem("KunciAI", "KunciAI")
         self.provider_combo.addItem("OpenAI", "OpenAI")
         self.provider_combo.addItem("DeepSeek", "DeepSeek")
@@ -5282,13 +5435,14 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         model_box.setSpacing(6)
         self.model_combo = QtWidgets.QComboBox()
         self.model_combo.setEditable(True)
+        self.configure_bright_combo(self.model_combo)
         self.model_combo.setMinimumWidth(220)
         self.model_combo.currentIndexChanged.connect(self.on_model_combo_changed)
         self.model_combo.setToolTip(McpDashboardState.t("model_combo_tooltip"))
         model_box.addWidget(self.model_combo)
 
         self.models_count_lbl = QtWidgets.QLabel(McpDashboardState.t("models_count", count=0))
-        self.models_count_lbl.setStyleSheet("color: #94A3B8; font-size: 11px;")
+        self.models_count_lbl.setStyleSheet("color: #38BDF8; font-size: 11px; font-weight: 600;")
         model_box.addWidget(self.models_count_lbl)
         grid.addLayout(model_box, 1, 3)
 
@@ -5321,7 +5475,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
 
         stat_row = QtWidgets.QHBoxLayout()
         self.fetch_status_lbl = QtWidgets.QLabel(McpDashboardState.t("fetch_status_initial"))
-        self.fetch_status_lbl.setStyleSheet("color: #94A3B8; font-size: 11px;")
+        self.fetch_status_lbl.setStyleSheet("color: #CBD5E1; font-size: 11px; font-weight: 500;")
         stat_row.addWidget(self.fetch_status_lbl)
 
         self.model_meta_lbl = QtWidgets.QLabel("")
@@ -5405,7 +5559,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             if self.fetch_status_lbl:
                 msg = "Penyedia diganti. Klik 'Ambil Model' atau tunggu pengambilan otomatis." if McpDashboardState.get_language() == "id" else "Provider changed. Click 'Fetch Models' or wait for auto-fetch."
                 self.fetch_status_lbl.setText(msg)
-                self.fetch_status_lbl.setStyleSheet("color: #94A3B8; font-size: 11px;")
+                self.fetch_status_lbl.setStyleSheet("color: #CBD5E1; font-size: 11px; font-weight: 500;")
 
     def on_toggle_api_key_visibility(self):
         if not self.api_key_input or not self.toggle_key_btn:
@@ -5525,6 +5679,9 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             for m in models:
                 mid = m["id"]
                 self.model_combo.addItem(mid, m)
+                if QtCore and QtGui:
+                    cnt = self.model_combo.count()
+                    self.model_combo.setItemData(cnt - 1, QtGui.QColor("#F8FAFC"), QtCore.Qt.ForegroundRole)
 
             found_prev = False
             if prev_selected:
@@ -5993,7 +6150,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         if "nav" in cat:
             return QtGui.QColor("#38BDF8")
         if "call" in cat:
-            return QtGui.QColor("#8B5CF6")
+            return QtGui.QColor("#A78BFA")
         if "mod" in cat:
             return QtGui.QColor("#FBBF24")
         if "mem" in cat:
@@ -6001,8 +6158,8 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         if "dbg" in cat or "debug" in cat:
             return QtGui.QColor("#FB7185")
         if "stack" in cat or "struct" in cat:
-            return QtGui.QColor("#A78BFA")
-        return QtGui.QColor("#94A3B8")
+            return QtGui.QColor("#C084FC")
+        return QtGui.QColor("#CBD5E1")
 
     def populate_tools_table(self):
         if not self.tools_table:
@@ -6038,7 +6195,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         for row, t in enumerate(filtered):
             idx_item = QtWidgets.QTableWidgetItem(str(row + 1))
             idx_item.setTextAlignment(QtCore.Qt.AlignCenter)
-            idx_item.setForeground(QtGui.QColor("#64748B"))
+            idx_item.setForeground(QtGui.QColor("#CBD5E1"))
             self.tools_table.setItem(row, 0, idx_item)
 
             name_item = QtWidgets.QTableWidgetItem(t["name"])
@@ -6057,12 +6214,12 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             if calls_count > 0:
                 calls_item.setForeground(QtGui.QColor("#34D399"))
             else:
-                calls_item.setForeground(QtGui.QColor("#64748B"))
+                calls_item.setForeground(QtGui.QColor("#94A3B8"))
             self.tools_table.setItem(row, 3, calls_item)
 
             desc_item = QtWidgets.QTableWidgetItem(t["desc"])
             desc_item.setToolTip(t["desc"])
-            desc_item.setForeground(QtGui.QColor("#E8EDF5"))
+            desc_item.setForeground(QtGui.QColor("#F8FAFC"))
             self.tools_table.setItem(row, 4, desc_item)
 
         self.tools_table.setColumnWidth(0, 45)
@@ -6085,6 +6242,9 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             for ea in idautils.Functions():
                 name = ida_funcs.get_func_name(ea)
                 self.func_combo.addItem(f"{name} ({hex(ea)})", ea)
+                if QtCore and QtGui:
+                    cnt = self.func_combo.count()
+                    self.func_combo.setItemData(cnt - 1, QtGui.QColor("#F8FAFC"), QtCore.Qt.ForegroundRole)
                 count += 1
                 if count >= 800:
                     break
@@ -6311,9 +6471,9 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             "agent_error": "#FB7185",
             "ui_action": "#FBBF24"
         }
-        color = colors.get(record.get("type"), "#94A3B8")
+        color = colors.get(record.get("type"), "#CBD5E1")
         msg = record.get("message", "").replace("<", "&lt;").replace(">", "&gt;")
-        line = f"<span style='color: #64748B;'>[{record.get('time', '')}]</span> <span style='color: {color}; font-weight: 600;'>{msg}</span>"
+        line = f"<span style='color: #94A3B8;'>[{record.get('time', '')}]</span> <span style='color: {color}; font-weight: 600;'>{msg}</span>"
         if QtCore.QThread.currentThread() == self.log_text.thread():
             self.log_text.append(line)
         else:
