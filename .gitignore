@@ -1,10 +1,18 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.venv/
+env/
+venv/
 *.log
 *.tmp
 *.bak
 *.bak_*
+scratch/
+ida_active_session.json
+ida_current_function.c
+ida_agent_context.json
+ida_agent_chat.json
 .vscode/
 .idea/
 .cursor/
@@ -12,3 +20,7 @@ __pycache__/
 archive/
 ReClass.NET/
 ReClass.NET-MCP/
+bin/
+Thumbs.db
+desktop.ini
+.DS_Store

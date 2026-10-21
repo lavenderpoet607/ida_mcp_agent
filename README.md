@@ -10,13 +10,18 @@ Bridge integrasi Model Context Protocol (MCP) untuk menghubungkan AI Coding & Re
   - Endpoint HTTP JSON-RPC 2.0 di `http://127.0.0.1:13337/mcp`
   - Mendukung 48+ fungsi analisis (dekompilasi Hex-Rays, disassembly, cross-references, tipe data struct, renaming symbol, memory read/write)
   - Dilengkapi antarmuka grafis (Qt Dashboard) di dalam IDA Pro untuk memantau status agen dan telemetri RPC secara real-time
-  - **Dukungan Dua Bahasa Murni (Bilingual UI)**: Pilihan bahasa **Bahasa Indonesia** atau **English** secara langsung melalui selector dropdown pada header bar tanpa mencampur bahasa
+  - **Dynamic Workspace & Interactive File Picker**: Tidak ada path hardcoded. Direktori kerja otomatis dideteksi dari file database/biner yang aktif di IDA Pro atau dapat dipilih langsung oleh pengguna melalui tombol **"Pilih File..."** (`QFileDialog`) di dashboard untuk memilih file konfigurasi `ida-mcp.json` maupun skrip runner `agent_runner.py`.
+  - **Custom C Export Path**: Tombol **"Simpan File C..."** dilengkapi dialog penyimpanan berkas (`QFileDialog.getSaveFileName`) sehingga kode semu hasil dekompilasi dapat disimpan ke lokasi mana pun yang diinginkan.
+  - **Dukungan Dua Bahasa Murni (Bilingual UI)**: Pilihan bahasa **Bahasa Indonesia** atau **English** secara langsung melalui selector dropdown pada header bar tanpa percampuran bahasa.
+  - **Auto-Load Startup**: Plugin otomatis dimuat saat IDA Pro dibuka melalui `idapythonrc.py` atau langsung dari direktori `plugins/`.
+
 - **ReClass.NET MCP Server (`reclass_mcp_server.py`)**
   - Bridge TCP socket di port `127.0.0.1:27015`
   - Memungkinkan AI Agent membaca memori proses target, membedah struktur class/struct, dan memanipulasi node data secara dinamis
+
 - **Auto-Find Installer (`install.ps1`)**
   - Otomatis mendeteksi proses IDA Pro yang sedang berjalan, registry, dan direktori instalasi tanpa hardcode path
-  - Otomatis mendeteksi ReClass.NET dan memasang plugin DLL
+  - Otomatis mendeteksi ReClass.NET dan memasang plugin DLL (opsional dengan flag `-InstallReClass`)
   - Mengonfigurasi file konfigurasi Claude Desktop secara otomatis
 
 ---
@@ -31,7 +36,7 @@ Jalankan perintah berikut di PowerShell:
 powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/lavenderpoet607/ida_mcp_agent/main/install.ps1 | iex"
 ```
 
-Atau jika dijalankan secara lokal:
+Atau jika dijalankan secara lokal dari direktori repositori:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install.ps1
@@ -51,7 +56,6 @@ Atau secara lokal:
 powershell -ExecutionPolicy Bypass -File .\install.ps1 -InstallReClass
 ```
 
-
 ---
 
 ## Prasyarat Sistem
@@ -61,13 +65,29 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -InstallReClass
 | **Sistem Operasi** | Windows 10 / 11 (64-bit) |
 | **Python** | 3.11 atau yang lebih baru |
 | **IDA Pro** | 7.x / 8.x / 9.x dengan Python 3 |
-| **ReClass.NET** | x64 Edition |
+| **ReClass.NET** | x64 Edition (opsional) |
 
 ---
 
 ## Konfigurasi AI Agent
 
-### 1. Claude Desktop (`%APPDATA%\Claude\claude_desktop_config.json`)
+### 1. Antigravity IDE / Cursor (`ida-mcp.json` atau `.cursor/mcp.json`)
+
+Pilih file `ida-mcp.json` di dashboard IDA Pro menggunakan tombol **"Pilih File..."**, atau tambahkan konfigurasi berikut ke ruang kerja Anda:
+
+```json
+{
+  "command": "python",
+  "args": [
+    "-m",
+    "ida_pro_mcp.server",
+    "--ida-rpc",
+    "http://127.0.0.1:13337"
+  ]
+}
+```
+
+### 2. Claude Desktop (`%APPDATA%\Claude\claude_desktop_config.json`)
 
 ```json
 {
@@ -84,20 +104,6 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -InstallReClass
 }
 ```
 
-### 2. Antigravity IDE / Cursor (`.cursor/mcp.json` atau `ida-mcp.json`)
-
-```json
-{
-  "command": "python",
-  "args": [
-    "-m",
-    "ida_pro_mcp.server",
-    "--ida-rpc",
-    "http://127.0.0.1:13337"
-  ]
-}
-```
-
 ---
 
 ## Struktur File Repositori
@@ -106,35 +112,35 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -InstallReClass
 ida_mcp_agent/
 ├── install.ps1               PowerShell Auto-Find Installer
 ├── requirements.txt          Daftar dependensi Python
-├── rea_agent.py              Plugin IDA Pro (MCP Server + Qt Dashboard UI)
+├── rea_agent.py              Plugin IDA Pro (MCP Server + Qt Dashboard UI + File Picker)
 ├── reclass_mcp_server.py     Server MCP Bridge untuk ReClass.NET
-├── idapythonrc.py            Script Auto-Load Startup IDA Pro
+├── idapythonrc.py            Skrip auto-load startup IDA Pro
 ├── ida-mcp.json              Template konfigurasi MCP untuk Antigravity/Cursor
-├── ida_agent_config.json     Konfigurasi model AI internal plugin IDA
+├── ida_agent_config.json     Konfigurasi model AI internal dan preferensi workspace
 ├── ida_client.py             Modul client Python untuk berinteraksi dengan IDA MCP
 ├── pointer_resolver.py       Mesin analisis dan resolusi pointer otomatis
-├── agent_runner.py           Script mandiri untuk menjalankan auto pointer resolver
-├── DecrpytXOR.py             Script pembantu dekripsi string XOR
-├── patch_and_comment_xor.py  Script pembantu patching dan anotasi string XOR
+├── agent_runner.py           Skrip mandiri untuk menjalankan auto pointer resolver
+├── DecrpytXOR.py             Skrip pembantu dekripsi string XOR
+├── patch_and_comment_xor.py  Skrip pembantu patching dan anotasi string XOR
 ├── bin/
 │   ├── ReClassMCP.dll        Plugin ReClass.NET compiled .NET
 │   └── Newtonsoft.Json.dll   Dependensi JSON untuk ReClass.NET
-└── .gitignore                File konfigurasi ignore Git
-
+├── .gitignore                File konfigurasi ignore Git (mengabaikan cache, runtime files & backup)
+└── README.md                 Dokumentasi resmi proyek
 ```
 
 ---
 
 ## Verifikasi Endpoint
 
-Setelah IDA Pro dan ReClass.NET dijalankan:
+Setelah IDA Pro dibuka dan plugin berjalan:
 
 1. **IDA Pro MCP Health Check**:
 ```powershell
 python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:13337/mcp', data=b'{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"check_connection\",\"params\":[]}', timeout=3).read().decode())"
 ```
 
-2. **ReClass.NET TCP Ping**:
+2. **ReClass.NET TCP Ping** (jika menggunakan ReClass.NET):
 ```powershell
 python -c "import socket; s = socket.socket(); s.connect(('127.0.0.1', 27015)); s.sendall(b'{\"command\":\"ping\",\"args\":{}}\n'); print(s.recv(1024).decode()); s.close()"
 ```
