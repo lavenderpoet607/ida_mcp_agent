@@ -52,14 +52,14 @@ class RPCRegistry:
         func = self.methods[method]
         hints = get_type_hints(func)
 
-        # Remove return annotation if present
+                                             
         hints.pop("return", None)
 
         if isinstance(params, list):
             if len(params) != len(hints):
                 raise JSONRPCError(-32602, f"Invalid params: expected {len(hints)} arguments, got {len(params)}")
 
-            # Validate and convert parameters
+                                             
             converted_params = []
             for value, (param_name, expected_type) in zip(params, hints.items()):
                 try:
@@ -74,7 +74,7 @@ class RPCRegistry:
             if set(params.keys()) != set(hints.keys()):
                 raise JSONRPCError(-32602, f"Invalid params: expected {list(hints.keys())}")
 
-            # Validate and convert parameters
+                                             
             converted_params = {}
             for param_name, expected_type in hints.items():
                 value = params.get(param_name)
@@ -164,7 +164,7 @@ class JSONRPCRequestHandler(http.server.BaseHTTPRequestHandler):
             self.send_jsonrpc_error(-32700, "Parse error: invalid JSON", None)
             return
 
-        # Prepare the response
+                              
         response: dict[str, Any] = {
             "jsonrpc": "2.0"
         }
@@ -172,7 +172,7 @@ class JSONRPCRequestHandler(http.server.BaseHTTPRequestHandler):
             response["id"] = request.get("id")
 
         try:
-            # Basic JSON-RPC validation
+                                       
             if not isinstance(request, dict):
                 raise JSONRPCError(-32600, "Invalid Request")
             if request.get("jsonrpc") != "2.0":
@@ -187,7 +187,7 @@ class JSONRPCRequestHandler(http.server.BaseHTTPRequestHandler):
             elif "ReaBridgeState" in globals():
                 ReaBridgeState.log_event("agent_call", f"Agent -> {method}()", params)
 
-            # Dispatch the method
+                                 
             result = rpc_registry.dispatch(method, params)
             response["result"] = result
 
@@ -249,14 +249,14 @@ class JSONRPCRequestHandler(http.server.BaseHTTPRequestHandler):
             self.close_connection = True
 
     def log_message(self, format, *args):
-        # Suppress logging
+                          
         pass
 
 class MCPHTTPServer(http.server.HTTPServer):
     allow_reuse_address = True
 
     def handle_error(self, request, client_address):
-        # Gracefully handle normal client disconnections (ConnectionAbortedError 10053, ConnectionResetError 10054, BrokenPipe)
+                                                                                                                               
         exc_type, exc_val, _ = sys.exc_info()
         if exc_type in (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, TimeoutError):
             return
@@ -297,12 +297,12 @@ class Server:
 
     def _run_server(self):
         try:
-            # Create server in the thread to handle binding
+                                                           
             self.server = MCPHTTPServer((Server.HOST, Server.PORT), JSONRPCRequestHandler)
             print(f"[MCP] Server started at http://{Server.HOST}:{Server.PORT}")
             self.server.serve_forever()
         except OSError as e:
-            if e.errno == 98 or e.errno == 10048:  # Port already in use (Linux/Windows)
+            if e.errno == 98 or e.errno == 10048:                                       
                 print("[MCP] Error: Port 13337 is already in use")
             else:
                 print(f"[MCP] Server error: {e}")
@@ -312,9 +312,9 @@ class Server:
         finally:
             self.running = False
 
-# A module that helps with writing thread safe ida code.
-# Based on:
-# https://web.archive.org/web/20160305190440/http://www.williballenthin.com/blog/2015/09/04/idapython-synchronization-decorator/
+                                                        
+           
+                                                                                                                                
 import logging
 import queue
 import traceback
@@ -355,28 +355,28 @@ class IDAError(Exception):
 class IDASyncError(Exception):
     pass
 
-# Important note: Always make sure the return value from your function f is a
-# copy of the data you have gotten from IDA, and not the original data.
-#
-# Example:
-# --------
-#
-# Do this:
-#
-#   @idaread
-#   def ts_Functions():
-#       return list(idautils.Functions())
-#
-# Don't do this:
-#
-#   @idaread
-#   def ts_Functions():
-#       return idautils.Functions()
-#
+                                                                             
+                                                                       
+ 
+          
+          
+ 
+          
+ 
+            
+                       
+                                         
+ 
+                
+ 
+            
+                       
+                                   
+ 
 
 logger = logging.getLogger(__name__)
 
-# Enum for safety modes. Higher means safer:
+                                            
 class IDASafety(IntEnum):
     SAFE_NONE = ida_kernwin.MFF_FAST
     SAFE_READ = ida_kernwin.MFF_READ
@@ -388,7 +388,7 @@ def sync_wrapper(ff, safety_mode: IDASafety):
     """
     Call a function ff with a specific IDA safety_mode.
     """
-    #logger.debug('sync_wrapper: {}, {}'.format(ff.__name__, safety_mode))
+                                                                          
 
     if safety_mode not in [IDASafety.SAFE_READ, IDASafety.SAFE_WRITE]:
         error_str = 'Invalid safety mode {} over function {}'\
@@ -396,18 +396,18 @@ def sync_wrapper(ff, safety_mode: IDASafety):
         logger.error(error_str)
         raise IDASyncError(error_str)
 
-    # No safety level is set up:
+                                
     res_container = queue.Queue()
 
     def runned():
-        #logger.debug('Inside runned')
+                                      
 
-        # Make sure that we are not already inside a sync_wrapper:
+                                                                  
         if not call_stack.empty():
             last_func_name = call_stack.get()
             error_str = ('Call stack is not empty while calling the '
                 'function {} from {}').format(ff.__name__, last_func_name)
-            #logger.error(error_str)
+                                    
             raise IDASyncError(error_str)
 
         call_stack.put((ff.__name__))
@@ -417,7 +417,7 @@ def sync_wrapper(ff, safety_mode: IDASafety):
             res_container.put(x)
         finally:
             call_stack.get()
-            #logger.debug('Finished runned')
+                                            
 
     ret_val = idaapi.execute_sync(runned, safety_mode)
     res = res_container.get()
@@ -433,7 +433,7 @@ def idawrite(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         ff = functools.partial(f, *args, **kwargs)
-        ff.__name__ = f.__name__ # type: ignore
+        ff.__name__ = f.__name__               
         return sync_wrapper(ff, idaapi.MFF_WRITE)
     return wrapper
 
@@ -447,7 +447,7 @@ def idaread(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         ff = functools.partial(f, *args, **kwargs)
-        ff.__name__ = f.__name__ # type: ignore
+        ff.__name__ = f.__name__               
         return sync_wrapper(ff, idaapi.MFF_READ)
     return wrapper
 
@@ -479,17 +479,17 @@ class Metadata(TypedDict):
 
 def get_image_size() -> int:
     try:
-        # https://www.hex-rays.com/products/ida/support/sdkdoc/structidainfo.html
-        info = idaapi.get_inf_structure() # type: ignore
+                                                                                 
+        info = idaapi.get_inf_structure()               
         omin_ea = info.omin_ea
         omax_ea = info.omax_ea
     except AttributeError:
         import ida_ida
         omin_ea = ida_ida.inf_get_omin_ea()
         omax_ea = ida_ida.inf_get_omax_ea()
-    # Bad heuristic for image size (bad if the relocations are the last section)
+                                                                                
     image_size = omax_ea - omin_ea
-    # Try to extract it from the PE header
+                                          
     header = idautils.peutils_t().header()
     if header and header[:4] == b"PE\0\0":
         image_size = struct.unpack("<I", header[0x50:0x54])[0]
@@ -507,8 +507,8 @@ def check_connection() -> dict:
 @idaread
 def get_metadata() -> Metadata:
     """Get metadata about the current IDB"""
-    # Fat Mach-O binaries can return a None hash:
-    # https://github.com/mrexodia/ida-pro-mcp/issues/26
+                                                 
+                                                       
     def hash(f):
         try:
             return f().hex()
@@ -586,47 +586,47 @@ DEMANGLED_TO_EA = {}
 
 def create_demangled_to_ea_map():
     for ea in idautils.Functions():
-        # Get the function name and demangle it
-        # MNG_NODEFINIT inhibits everything except the main name
-        # where default demangling adds the function signature
-        # and decorators (if any)
+                                               
+                                                                
+                                                              
+                                 
         demangled = idaapi.demangle_name(
             idc.get_name(ea, 0), idaapi.MNG_NODEFINIT)
         if demangled:
             DEMANGLED_TO_EA[demangled] = ea
 
 def get_type_by_name(type_name: str) -> ida_typeinf.tinfo_t:
-    # 8-bit integers
+                    
     if type_name in ('int8', '__int8', 'int8_t', 'char', 'signed char'):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_INT8)
     elif type_name in ('uint8', '__uint8', 'uint8_t', 'unsigned char', 'byte', 'BYTE'):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_UINT8)
 
-    # 16-bit integers
+                     
     elif type_name in ('int16', '__int16', 'int16_t', 'short', 'short int', 'signed short', 'signed short int'):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_INT16)
     elif type_name in ('uint16', '__uint16', 'uint16_t', 'unsigned short', 'unsigned short int', 'word', 'WORD'):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_UINT16)
 
-    # 32-bit integers
+                     
     elif type_name in ('int32', '__int32', 'int32_t', 'int', 'signed int', 'long', 'long int', 'signed long', 'signed long int'):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_INT32)
     elif type_name in ('uint32', '__uint32', 'uint32_t', 'unsigned int', 'unsigned long', 'unsigned long int', 'dword', 'DWORD'):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_UINT32)
 
-    # 64-bit integers
+                     
     elif type_name in ('int64', '__int64', 'int64_t', 'long long', 'long long int', 'signed long long', 'signed long long int'):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_INT64)
     elif type_name in ('uint64', '__uint64', 'uint64_t', 'unsigned int64', 'unsigned long long', 'unsigned long long int', 'qword', 'QWORD'):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_UINT64)
 
-    # 128-bit integers
+                      
     elif type_name in ('int128', '__int128', 'int128_t', '__int128_t'):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_INT128)
     elif type_name in ('uint128', '__uint128', 'uint128_t', '__uint128_t', 'unsigned int128'):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_UINT128)
 
-    # Floating point types
+                          
     elif type_name in ('float', ):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_FLOAT)
     elif type_name in ('double', ):
@@ -634,15 +634,15 @@ def get_type_by_name(type_name: str) -> ida_typeinf.tinfo_t:
     elif type_name in ('long double', 'ldouble'):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_LDOUBLE)
 
-    # Boolean type
+                  
     elif type_name in ('bool', '_Bool', 'boolean'):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_BOOL)
 
-    # Void type
+               
     elif type_name in ('void', ):
         return ida_typeinf.tinfo_t(ida_typeinf.BTF_VOID)
 
-    # If not a standard type, try to get a named type
+                                                     
     tif = ida_typeinf.tinfo_t()
     if tif.get_named_type(None, type_name, ida_typeinf.BTF_STRUCT):
         return tif
@@ -669,10 +669,10 @@ def get_function_by_name(
     """Get a function by its name"""
     function_address = idaapi.get_name_ea(idaapi.BADADDR, name)
     if function_address == idaapi.BADADDR:
-        # If map has not been created yet, create it
+                                                    
         if len(DEMANGLED_TO_EA) == 0:
             create_demangled_to_ea_map()
-        # Try to find the function in the map, else raise an error
+                                                                  
         if name in DEMANGLED_TO_EA:
             function_address = DEMANGLED_TO_EA[name]
         else:
@@ -717,7 +717,7 @@ def convert_number(
     except ValueError:
         raise IDAError(f"Invalid number: {text}")
 
-    # Estimate the size of the number
+                                     
     if not size:
         size = 0
         n = abs(value)
@@ -727,13 +727,13 @@ def convert_number(
         size += 7
         size //= 8
 
-    # Convert the number to bytes
+                                 
     try:
         bytes = value.to_bytes(size, "little", signed=True)
     except OverflowError:
         raise IDAError(f"Number {text} is too big for {size} bytes")
 
-    # Convert the bytes to ASCII
+                                
     ascii = ""
     for byte in bytes.rstrip(b"\x00"):
         if byte >= 32 and byte <= 126:
@@ -771,7 +771,7 @@ def pattern_filter(data: list[T], pattern: str, key: str) -> list[T]:
     if not pattern:
         return data
 
-    # TODO: implement /regex/ matching
+                                      
 
     def matches(item) -> bool:
         return pattern.lower() in item[key].lower()
@@ -801,7 +801,7 @@ def list_globals_filter(
     """List matching globals in the database (paginated, filtered)"""
     globals: list[Global] = []
     for addr, name in idautils.Names():
-        # Skip functions
+                        
         if not idaapi.get_func(addr):
             globals += [Global(address=hex(addr), name=name)]
 
@@ -936,7 +936,7 @@ def decompile_checked(address: int) -> ida_hexrays.cfunc_t:
         if error.errea != idaapi.BADADDR:
             message += f" (address: {hex(error.errea)})"
         raise IDAError(message)
-    return cfunc # type: ignore (this is a SWIG issue)
+    return cfunc                                      
 
 @jsonrpc
 @idaread
@@ -954,7 +954,7 @@ def decompile_function(
         sl: ida_kernwin.simpleline_t
         item = ida_hexrays.ctree_item_t()
         addr = None if i > 0 else cfunc.entry_ea
-        if cfunc.get_line_item(sl.line, 0, False, None, item, None): # type: ignore (IDA SDK type hint wrong)
+        if cfunc.get_line_item(sl.line, 0, False, None, item, None):                                         
             dstr: str | None = item.dstr()
             if dstr:
                 ds = dstr.split(": ")
@@ -1053,7 +1053,7 @@ def disassemble_function(
             line["comments"] = comments
         lines.append(line)
 
-    # prototype and args via tinfo (safe across versions)
+                                                         
     rettype = None
     args: Optional[list[Argument]] = None
     tif = ida_typeinf.tinfo_t()
@@ -1089,7 +1089,7 @@ def get_xrefs_to(
     """Get all cross references to the given address"""
     xrefs = []
     xref: ida_xref.xrefblk_t
-    for xref in idautils.XrefsTo(parse_address(address)): # type: ignore (IDA SDK type hints are incorrect)
+    for xref in idautils.XrefsTo(parse_address(address)):                                                  
         xrefs += [
             Xref(address=hex(xref.frm),
                  type="code" if xref.iscode else "data",
@@ -1105,32 +1105,32 @@ def get_xrefs_to_field(
 ) -> list[Xref]:
     """Get all cross references to a named struct field (member)"""
 
-    # Get the type library
+                          
     til = ida_typeinf.get_idati()
     if not til:
         raise IDAError("Failed to retrieve type library.")
 
-    # Get the structure type info
+                                 
     tif = ida_typeinf.tinfo_t()
     if not tif.get_named_type(til, struct_name, ida_typeinf.BTF_STRUCT, True, False):
         print(f"Structure '{struct_name}' not found.")
         return []
 
-    # Get The field index
-    idx = ida_typeinf.get_udm_by_fullname(None, struct_name + '.' + field_name) # type: ignore (IDA SDK type hints are incorrect)
+                         
+    idx = ida_typeinf.get_udm_by_fullname(None, struct_name + '.' + field_name)                                                  
     if idx == -1:
         print(f"Field '{field_name}' not found in structure '{struct_name}'.")
         return []
 
-    # Get the type identifier
+                             
     tid = tif.get_udm_tid(idx)
     if tid == ida_idaapi.BADADDR:
         raise IDAError(f"Unable to get tid for structure '{struct_name}' and field '{field_name}'.")
 
-    # Get xrefs to the tid
+                          
     xrefs = []
     xref: ida_xref.xrefblk_t
-    for xref in idautils.XrefsTo(tid): # type: ignore (IDA SDK type hints are incorrect)
+    for xref in idautils.XrefsTo(tid):                                                  
         xrefs += [
             Xref(address=hex(xref.frm),
                  type="code" if xref.iscode else "data",
@@ -1157,10 +1157,10 @@ def get_callees(
         if insn.itype in [idaapi.NN_call, idaapi.NN_callfi, idaapi.NN_callni]:
             target = idc.get_operand_value(current_ea, 0)
             target_type = idc.get_operand_type(current_ea, 0)
-            # check if it's a direct call - avoid getting the indirect call offset
+                                                                                  
             if target_type in [idaapi.o_mem, idaapi.o_near, idaapi.o_far]:
-                # in here, we do not use get_function because the target can be external function.
-                # but, we should mark the target as internal/external function.
+                                                                                                  
+                                                                               
                 func_type = (
                     "internal" if idaapi.get_func(target) is not None else "external"
                 )
@@ -1171,10 +1171,10 @@ def get_callees(
                     )
         current_ea = idc.next_head(current_ea, func_end)
 
-    # deduplicate callees
+                         
     unique_callee_tuples = {tuple(callee.items()) for callee in callees}
     unique_callees = [dict(callee) for callee in unique_callee_tuples]
-    return unique_callees  # type: ignore
+    return unique_callees                
 
 @jsonrpc
 @idaread
@@ -1184,17 +1184,17 @@ def get_callers(
     """Get all callers of the given address"""
     callers = {}
     for caller_address in idautils.CodeRefsTo(parse_address(function_address), 0):
-        # validate the xref address is a function
+                                                 
         func = get_function(caller_address, raise_error=False)
         if not func:
             continue
-        # load the instruction at the xref address
+                                                  
         insn = idaapi.insn_t()
         idaapi.decode_insn(insn, caller_address)
-        # check the instruction is a call
+                                         
         if insn.itype not in [idaapi.NN_call, idaapi.NN_callfi, idaapi.NN_callni]:
             continue
-        # deduplicate callers by address
+                                        
         callers[func["address"]] = func
 
     return list(callers.values())
@@ -1227,15 +1227,15 @@ def set_comment(
     if not ida_hexrays.init_hexrays_plugin():
         return
 
-    # Reference: https://cyber.wtf/2019/03/22/using-ida-python-to-analyze-trickbot/
-    # Check if the address corresponds to a line
+                                                                                   
+                                                
     try:
         cfunc = decompile_checked(ea)
     except IDAError:
-        # Skip decompiler comment if decompilation fails
+                                                        
         return
 
-    # Special case for function entry comments
+                                              
     if ea == cfunc.entry_ea:
         idc.set_func_cmt(ea, comment, True)
         cfunc.refresh_func_ctext()
@@ -1247,12 +1247,12 @@ def set_comment(
         return
     nearest_ea = eamap[ea][0].ea
 
-    # Remove existing orphan comments
+                                     
     if cfunc.has_orphan_cmts():
         cfunc.del_orphan_cmts()
         cfunc.save_user_cmts()
 
-    # Set the comment by trying all possible item types
+                                                       
     tl = idaapi.treeloc_t()
     tl.ea = nearest_ea
     for itp in range(idaapi.ITP_SEMI, idaapi.ITP_COLON):
@@ -1415,10 +1415,10 @@ def get_global_variable_value_at_address(address: Annotated[str, "Address of the
     return get_global_variable_value_internal(ea)
 
 def get_global_variable_value_internal(ea: int) -> str:
-     # Get the type information for the variable
+                                                
      tif = ida_typeinf.tinfo_t()
      if not ida_nalt.get_tinfo(tif, ea):
-         # No type info, maybe we can figure out its size by its name
+                                                                     
          if not ida_bytes.has_any_name(ea):
              raise IDAError(f"Failed to get type information for variable at {ea:#x}")
 
@@ -1426,10 +1426,10 @@ def get_global_variable_value_internal(ea: int) -> str:
          if size == 0:
              raise IDAError(f"Failed to get type information for variable at {ea:#x}")
      else:
-         # Determine the size of the variable
+                                             
          size = tif.get_size()
 
-     # Read the value based on the size
+                                       
      if size == 0 and tif.is_array() and tif.get_array_element().is_decl_char():
          return_string = idaapi.get_strlit_contents(ea, -1, 0).decode("utf-8").strip()
          return f"\"{return_string}\""
@@ -1442,7 +1442,7 @@ def get_global_variable_value_internal(ea: int) -> str:
      elif size == 8:
          return hex(ida_bytes.get_qword(ea))
      else:
-         # For other sizes, return the raw bytes
+                                                
          return ' '.join(hex(x) for x in ida_bytes.get_bytes(ea, size))
 
 @jsonrpc
@@ -1493,7 +1493,7 @@ class my_modifier_t(ida_hexrays.user_lvar_modifier_t):
                 return True
         return False
 
-# NOTE: This is extremely hacky, but necessary to get errors out of IDA
+                                                                       
 def parse_decls_ctypes(decls: str, hti_flags: int) -> tuple[int, list[str]]:
     if sys.platform == "win32":
         import ctypes
@@ -1525,8 +1525,8 @@ def parse_decls_ctypes(decls: str, hti_flags: int) -> tuple[int, list[str]]:
 
         errors = ida_dll.parse_decls(c_til, c_decls, magic_printer, hti_flags)
     else:
-        # NOTE: The approach above could also work on other platforms, but it's
-        # not been tested and there are differences in the vararg ABIs.
+                                                                               
+                                                                       
         errors = ida_typeinf.parse_decls(None, decls, False, hti_flags)
         messages = []
     return errors, messages
@@ -1537,9 +1537,9 @@ def declare_c_type(
     c_declaration: Annotated[str, "C declaration of the type. Examples include: typedef int foo_t; struct bar { int a; bool b; };"],
 ):
     """Create or update a local type from a C declaration"""
-    # PT_SIL: Suppress warning dialogs (although it seems unnecessary here)
-    # PT_EMPTY: Allow empty types (also unnecessary?)
-    # PT_TYP: Print back status messages with struct tags
+                                                                           
+                                                     
+                                                         
     flags = ida_typeinf.PT_SIL | ida_typeinf.PT_EMPTY | ida_typeinf.PT_TYP
     errors, messages = parse_decls_ctypes(c_declaration, flags)
 
@@ -1557,13 +1557,13 @@ def set_local_variable_type(
 ):
     """Set a local variable's type"""
     try:
-        # Some versions of IDA don't support this constructor
+                                                             
         new_tif = ida_typeinf.tinfo_t(new_type, None, ida_typeinf.PT_SIL)
     except Exception:
         try:
             new_tif = ida_typeinf.tinfo_t()
-            # parse_decl requires semicolon for the type
-            ida_typeinf.parse_decl(new_tif, None, new_type + ";", ida_typeinf.PT_SIL) # type: ignore (IDA SDK type hints are incorrect)
+                                                        
+            ida_typeinf.parse_decl(new_tif, None, new_type + ";", ida_typeinf.PT_SIL)                                                  
         except Exception:
             raise IDAError(f"Failed to parse type: {new_type}")
     func = idaapi.get_func(parse_address(function_address))
@@ -1585,7 +1585,7 @@ def get_stack_frame_variables(
     return get_stack_frame_variables_internal(parse_address(function_address), True)
 
 def get_stack_frame_variables_internal(function_address: int, raise_error: bool) -> list[StackFrameVariable]:
-    # TODO: IDA 8.3 does not support tif.get_type_by_tid
+                                                        
     if ida_major < 9:
         return []
 
@@ -1649,7 +1649,7 @@ def get_defined_structures() -> list[StructureDefinition]:
                     for _, x in enumerate(udt)
                 ]
 
-            rv += [StructureDefinition(name=tif.get_type_name(), # type: ignore (IDA SDK type hints are incorrect)
+            rv += [StructureDefinition(name=tif.get_type_name(),                                                  
                                        size=hex(tif.get_size()),
                                        members=members)]
 
@@ -1659,7 +1659,7 @@ def get_defined_structures() -> list[StructureDefinition]:
 @idaread
 def analyze_struct_detailed(name: Annotated[str, "Name of the structure to analyze"]) -> dict:
     """Detailed analysis of a structure with all fields"""
-    # Get tinfo object
+                      
     tif = ida_typeinf.tinfo_t()
     if not tif.get_named_type(None, name):
         raise IDAError(f"Structure '{name}' not found!")
@@ -1675,7 +1675,7 @@ def analyze_struct_detailed(name: Annotated[str, "Name of the structure to analy
         result["error"] = "This is not a user-defined type!"
         return result
 
-    # Get UDT (User Defined Type) details
+                                         
     udt_data = ida_typeinf.udt_type_data_t()
     if not tif.get_udt_details(udt_data):
         result["error"] = "Failed to get structure details!"
@@ -1685,10 +1685,10 @@ def analyze_struct_detailed(name: Annotated[str, "Name of the structure to analy
     result["is_union"] = udt_data.is_union
     result["udt_type"] = "Union" if udt_data.is_union else "Struct"
 
-    # Output information about each field
+                                         
     members = []
     for i, member in enumerate(udt_data):
-        offset = member.begin() // 8  # Convert bits to bytes
+        offset = member.begin() // 8                         
         size = member.size // 8 if member.size > 0 else member.type.get_size()
         member_type = member.type._print()
         member_name = member.name
@@ -1702,7 +1702,7 @@ def analyze_struct_detailed(name: Annotated[str, "Name of the structure to analy
             "is_nested_udt": member.type.is_udt()
         }
 
-        # If this is a nested structure, show additional information
+                                                                    
         if member.type.is_udt():
             member_info["nested_size"] = member.type.get_size()
 
@@ -1720,12 +1720,12 @@ def get_struct_at_address(address: Annotated[str, "Address to analyze structure 
     """Get structure field values at a specific address"""
     addr = parse_address(address)
 
-    # Get structure tinfo
+                         
     tif = ida_typeinf.tinfo_t()
     if not tif.get_named_type(None, struct_name):
         raise IDAError(f"Structure '{struct_name}' not found!")
 
-    # Get structure details
+                           
     udt_data = ida_typeinf.udt_type_data_t()
     if not tif.get_udt_details(udt_data):
         raise IDAError("Failed to get structure details!")
@@ -1743,10 +1743,10 @@ def get_struct_at_address(address: Annotated[str, "Address to analyze structure 
         member_name = member.name
         member_size = member.type.get_size()
 
-        # Try to get value based on size
+                                        
         try:
             if member.type.is_ptr():
-                # Pointer
+                         
                 is_64bit = ida_ida.inf_is_64bit() if ida_major >= 9 else idaapi.get_inf_structure().is_64bit()
                 if is_64bit:
                     value = idaapi.get_qword(member_addr)
@@ -1767,7 +1767,7 @@ def get_struct_at_address(address: Annotated[str, "Address to analyze structure 
                 value = idaapi.get_qword(member_addr)
                 value_str = f"0x{value:016X} ({value})"
             else:
-                # For large structures, read first few bytes
+                                                            
                 bytes_data = []
                 for i in range(min(member_size, 16)):
                     try:
@@ -1833,7 +1833,7 @@ def search_structures(filter: Annotated[str, "Filter pattern to search for struc
     for ordinal in range(1, limit):
         tif = ida_typeinf.tinfo_t()
         if tif.get_numbered_type(None, ordinal):
-            type_name: str = tif.get_type_name() # type: ignore (IDA SDK type hints are incorrect)
+            type_name: str = tif.get_type_name()                                                  
             if type_name and filter.lower() in type_name.lower():
                 if tif.is_udt():
                     udt_data = ida_typeinf.udt_type_data_t()
@@ -1867,7 +1867,7 @@ def rename_stack_frame_variable(
     if not ida_frame.get_func_frame(frame_tif, func):
         raise IDAError("No frame returned.")
 
-    idx, udm = frame_tif.get_udm(old_name) # type: ignore (IDA SDK type hints are incorrect)
+    idx, udm = frame_tif.get_udm(old_name)                                                  
     if not udm:
         raise IDAError(f"{old_name} not found.")
 
@@ -1926,7 +1926,7 @@ def set_stack_frame_variable_type(
     if not ida_frame.get_func_frame(frame_tif, func):
         raise IDAError("No frame returned.")
 
-    idx, udm = frame_tif.get_udm(variable_name) # type: ignore (IDA SDK type hints are incorrect)
+    idx, udm = frame_tif.get_udm(variable_name)                                                  
     if not udm:
         raise IDAError(f"{variable_name} not found.")
 
@@ -1955,7 +1955,7 @@ def delete_stack_frame_variable(
     if not ida_frame.get_func_frame(frame_tif, func):
         raise IDAError("No frame returned.")
 
-    idx, udm = frame_tif.get_udm(variable_name) # type: ignore (IDA SDK type hints are incorrect)
+    idx, udm = frame_tif.get_udm(variable_name)                                                  
     if not udm:
         raise IDAError(f"{variable_name} not found.")
 
@@ -2288,11 +2288,10 @@ def dbg_enable_breakpoint(
         return
     raise IDAError(f"Failed to {'' if enable else 'disable '}breakpoint at address {hex(ea)}")
 
-
-# ==============================================================================
-# IDA Pro MCP Dashboard & Multi-Agent Workbench
-# High-Utility, Anti-Slop, Tailored to Each User's Agent
-# ==============================================================================
+                                                                                
+                                               
+                                                        
+                                                                                
 import datetime
 import hashlib
 import json
@@ -2306,7 +2305,7 @@ import threading
 import urllib.request
 import urllib.error
 
-# 1. Environment & Package path priority (PyQt5 & SIP resolution for Python 3.14)
+                                                                                 
 try:
     user_site = site.getusersitepackages()
     if user_site and user_site not in sys.path:
@@ -2357,11 +2356,11 @@ except Exception as e:
         except Exception:
             continue
 
-# ==============================================================================
-# MCP Tools Metadata Catalog (59 Tools)
-# ==============================================================================
+                                                                                
+                                       
+                                                                                
 MCP_TOOLS_CATALOG = [
-    # Navigation & Metadata
+                           
     {"name": "get_metadata", "category": "Navigation", "desc": "Returns binary module name, base address, sha256, processor type"},
     {"name": "get_current_address", "category": "Navigation", "desc": "Returns currently focused screen cursor address"},
     {"name": "get_current_function", "category": "Navigation", "desc": "Returns full details of function at current screen cursor"},
@@ -2376,18 +2375,18 @@ MCP_TOOLS_CATALOG = [
     {"name": "list_local_types", "category": "Navigation", "desc": "List local types, structs, and typedefs"},
     {"name": "convert_number", "category": "Navigation", "desc": "Convert integer between hex, decimal, and binary"},
 
-    # Decompilation & Disassembly
+                                 
     {"name": "decompile_function", "category": "Decompilation", "desc": "Run Hex-Rays decompiler and generate high-level C pseudocode"},
     {"name": "disassemble_function", "category": "Disassembly", "desc": "Generate detailed assembly instruction listing"},
 
-    # Cross References & Calls
+                              
     {"name": "get_xrefs_to", "category": "Xrefs", "desc": "Query all code and data cross-references pointing to address"},
     {"name": "get_xrefs_to_field", "category": "Xrefs", "desc": "Query cross-references to a specific structure member"},
     {"name": "get_callees", "category": "Calls", "desc": "Enumerate all subroutines called by the target function"},
     {"name": "get_callers", "category": "Calls", "desc": "Enumerate all functions that call the target function"},
     {"name": "get_entry_points", "category": "Navigation", "desc": "List binary entry points and exported routines"},
 
-    # Renaming & Comments
+                         
     {"name": "set_comment", "category": "Modification", "desc": "Add or update regular/repeatable comment at address"},
     {"name": "rename_local_variable", "category": "Modification", "desc": "Rename variable in Hex-Rays decompiled pseudocode"},
     {"name": "rename_global_variable", "category": "Modification", "desc": "Rename global symbol or variable in IDA database"},
@@ -2398,7 +2397,7 @@ MCP_TOOLS_CATALOG = [
     {"name": "set_local_variable_type", "category": "Modification", "desc": "Change local variable type in Hex-Rays view"},
     {"name": "patch_address_assembles", "category": "Modification", "desc": "Assemble instruction and patch bytes into database"},
 
-    # Stack Frames & Structures
+                               
     {"name": "get_stack_frame_variables", "category": "Stack", "desc": "List local stack frame variables and offsets"},
     {"name": "rename_stack_frame_variable", "category": "Stack", "desc": "Rename stack frame variable"},
     {"name": "create_stack_frame_variable", "category": "Stack", "desc": "Define new stack variable in function frame"},
@@ -2410,7 +2409,7 @@ MCP_TOOLS_CATALOG = [
     {"name": "get_struct_info_simple", "category": "Structures", "desc": "Get struct name, total size, and member count"},
     {"name": "search_structures", "category": "Structures", "desc": "Search defined structures by name substring"},
 
-    # Memory & Data Access
+                          
     {"name": "read_memory_bytes", "category": "Memory", "desc": "Read arbitrary byte buffer from memory"},
     {"name": "data_read_byte", "category": "Memory", "desc": "Read 8-bit byte at address"},
     {"name": "data_read_word", "category": "Memory", "desc": "Read 16-bit word at address"},
@@ -2420,7 +2419,7 @@ MCP_TOOLS_CATALOG = [
     {"name": "get_global_variable_value_by_name", "category": "Memory", "desc": "Read value of global variable by symbol"},
     {"name": "get_global_variable_value_at_address", "category": "Memory", "desc": "Read value of global variable by address"},
 
-    # Debugging & Execution
+                           
     {"name": "dbg_get_registers", "category": "Debugger", "desc": "Read CPU register context of active thread"},
     {"name": "dbg_get_call_stack", "category": "Debugger", "desc": "Retrieve call stack backtrace frames"},
     {"name": "dbg_list_breakpoints", "category": "Debugger", "desc": "Enumerate active breakpoints and hit counts"},
@@ -2435,10 +2434,227 @@ MCP_TOOLS_CATALOG = [
     {"name": "dbg_enable_breakpoint", "category": "Debugger", "desc": "Enable or disable breakpoint"}
 ]
 
+                                                                                
+                                     
+                                                                                
 
-# ==============================================================================
-# Central State & Multi-Agent Manager
-# ==============================================================================
+DASHBOARD_I18N = {
+    "en": {
+        "title": "MCP DASHBOARD",
+        "funcs_suffix": "Funcs",
+        "agent_prefix": "Agent:",
+        "mcp_online": "MCP Online :13337",
+        "mcp_offline": "MCP Offline",
+        "refresh": "Refresh",
+        "refreshing": "Refreshing...",
+        "refresh_tooltip": "Reload binary state, cursor info, and server telemetry",
+        "tab_mcp": "MCP Server && Agents",
+        "tab_copilot": "AI Copilot && Deobfuscation",
+        "tab_decompiled": "Decompiled C",
+        "tab_xrefs": "Calls && Xrefs",
+        "tab_log": "Activity Log",
+        "server_status_title": "Model Context Protocol (MCP) Server Status",
+        "copy_mcp_url": "Copy MCP URL",
+        "test_connection": "Test Connection",
+        "testing_connection": "Testing...",
+        "url_copied": "Endpoint URL copied to clipboard: http://127.0.0.1:13337/mcp",
+        "proto_badge": "Protocol: JSON-RPC 2.0",
+        "tools_badge": "Tools: 59 Methods",
+        "reqs_badge": "Requests: {count} Processed",
+        "user_agent_cfg_title": "User Agent Configuration",
+        "user_agent_cfg_sub": "(Integrated with AI Pair Programmer)",
+        "select_agent_lbl": "Select Your AI Agent:",
+        "copy_agent_cfg": "Copy Agent Config (JSON)",
+        "save_agent_pref": "Save Agent Preference",
+        "run_local_agent": "Run ida_mcp_agent",
+        "agent_pref_saved": "Agent preference saved successfully!",
+        "agent_cfg_copied": "JSON configuration copied to clipboard!",
+        "tools_catalog_title": "MCP Registered Tools Catalog",
+        "tools_registered_count": "({count} Methods Registered)",
+        "tools_showing_count": "(Showing {shown} of {total} Methods)",
+        "category_lbl": "Category:",
+        "all_categories": "All Categories",
+        "tools_filter_placeholder": "Filter tools (e.g. decompile, dbg, struct, xref)...",
+        "col_no": "No",
+        "col_method_name": "Method Name",
+        "col_category": "Category",
+        "col_calls": "Calls",
+        "col_desc": "Description",
+        "func_title_loading": "Function: Loading...",
+        "func_title": "Function: {name}",
+        "cff_badge": "CFF OBFUSCATED",
+        "jump_in_ida": "Jump in IDA",
+        "target_func_lbl": "Target Function:",
+        "func_range": "Range: {start} - {end} ({size} bytes)",
+        "btn_deobfuscate": "Deobfuscate && Explain",
+        "btn_suggest_renames": "Suggest Renames",
+        "btn_apply_renames": "Apply Renames to IDA",
+        "btn_send_to_agent": "Send to {agent}",
+        "ai_placeholder": "Agent analysis, deobfuscated pseudocode summary, and reverse engineering reasoning will appear here...",
+        "ask_placeholder": "Ask {agent}: e.g. 'How to bypass this check?', 'Explain the CFF logic'...",
+        "ask_btn": "Ask {agent}",
+        "copy_c_code": "Copy C Code",
+        "save_c_file": "Save to ida_current_function.c",
+        "c_copied": "Pseudocode copied to clipboard!",
+        "c_saved": "Saved & Exported '{name}'!",
+        "callers_header": "Callers ({count} functions calling this):",
+        "callees_header": "Callees ({count} subroutines called):",
+        "log_stream_title": "Live MCP RPC Stream: Connected to {agent}",
+        "filter_event_lbl": "Filter Event:",
+        "all_events": "All Events",
+        "agent_calls": "Agent Calls",
+        "agent_success": "Agent Success",
+        "errors": "Errors",
+        "ui_actions": "UI Actions",
+        "clear_log": "Clear Log",
+        "custom_agent_title": "Custom AI Agent & Model Provider Configuration",
+        "direct_llm_mode": "Direct LLM Mode",
+        "provider_name_lbl": "Provider Name:",
+        "base_url_lbl": "Base URL:",
+        "api_key_lbl": "API Key:",
+        "api_key_placeholder": "Enter API Key (saved encrypted)",
+        "show_key": "Show",
+        "hide_key": "Hide",
+        "model_id_lbl": "Model ID:",
+        "model_combo_tooltip": "Dynamic model list from API provider or manual input as fallback",
+        "models_count": "({count} models)",
+        "fetch_models": "Fetch Models",
+        "refresh_models": "Refresh Models",
+        "fetching_models": "Fetching...",
+        "test_selected_model": "Test Selected Model",
+        "testing_model": "Testing Model...",
+        "save_agent_config": "Save Agent Config",
+        "fetch_status_initial": "Status: Not fetched yet (click 'Fetch Models' or enter Base URL & API Key)",
+        "fetch_status_fetching": "Fetching model list from provider...",
+        "fetch_status_success": "Fetch succeeded: {count} models loaded at {time}",
+        "fetch_status_empty": "Empty state: Provider returned empty list at {time}",
+        "fetch_status_failed": "Failed to fetch models ({time}): {msg}",
+        "testing_endpoint": "Testing MCP endpoint at http://127.0.0.1:13337/mcp...",
+        "conn_success": "SUCCESS: {msg}",
+        "conn_failed": "FAILED: {msg}",
+        "jumped_to": "Jumped in IDA to {name}",
+        "no_func_selected": "No active function selected.",
+        "renamed_success": "Successfully renamed {count} variables in Hex-Rays view!",
+        "no_renames": "No renames to apply",
+        "click_apply_renames": "Click <b>'Apply Renames to IDA'</b> to apply proposed variable renames directly in Hex-Rays pseudocode.",
+        "lang_selector_lbl": "Language:",
+        "cat_nav": "Navigation",
+        "cat_calls": "Calls",
+        "cat_mod": "Modification",
+        "cat_stack": "Stack",
+        "cat_struct": "Structures",
+        "cat_mem": "Memory",
+        "cat_dbg": "Debugger"
+    },
+    "id": {
+        "title": "DASHBOARD MCP",
+        "funcs_suffix": "Fungsi",
+        "agent_prefix": "Agen:",
+        "mcp_online": "MCP Aktif :13337",
+        "mcp_offline": "MCP Tidak Aktif",
+        "refresh": "Segarkan",
+        "refreshing": "Menyegarkan...",
+        "refresh_tooltip": "Muat ulang status biner, posisi kursor, dan telemetri server",
+        "tab_mcp": "Server MCP && Agen",
+        "tab_copilot": "AI Copilot && Deobfuskasi",
+        "tab_decompiled": "Hasil Dekompilasi C",
+        "tab_xrefs": "Panggilan && Xrefs",
+        "tab_log": "Log Aktivitas",
+        "server_status_title": "Status Server Model Context Protocol (MCP)",
+        "copy_mcp_url": "Salin URL MCP",
+        "test_connection": "Uji Koneksi",
+        "testing_connection": "Menguji...",
+        "url_copied": "URL endpoint disalin ke papan klip: http://127.0.0.1:13337/mcp",
+        "proto_badge": "Protokol: JSON-RPC 2.0",
+        "tools_badge": "Peralatan: 59 Metode",
+        "reqs_badge": "Permintaan: {count} Diproses",
+        "user_agent_cfg_title": "Konfigurasi Agen Pengguna",
+        "user_agent_cfg_sub": "(Terintegrasi dengan AI Pair Programmer)",
+        "select_agent_lbl": "Pilih Agen AI Anda:",
+        "copy_agent_cfg": "Salin Konfigurasi Agen (JSON)",
+        "save_agent_pref": "Simpan Preferensi Agen",
+        "run_local_agent": "Jalankan ida_mcp_agent",
+        "agent_pref_saved": "Preferensi agen berhasil disimpan!",
+        "agent_cfg_copied": "Konfigurasi JSON disalin ke papan klip!",
+        "tools_catalog_title": "Katalog Peralatan Terdaftar MCP",
+        "tools_registered_count": "({count} Metode Terdaftar)",
+        "tools_showing_count": "(Menampilkan {shown} dari {total} Metode)",
+        "category_lbl": "Kategori:",
+        "all_categories": "Semua Kategori",
+        "tools_filter_placeholder": "Saring alat (misal: decompile, dbg, struct, xref)...",
+        "col_no": "No",
+        "col_method_name": "Nama Metode",
+        "col_category": "Kategori",
+        "col_calls": "Panggilan",
+        "col_desc": "Deskripsi",
+        "func_title_loading": "Fungsi: Memuat...",
+        "func_title": "Fungsi: {name}",
+        "cff_badge": "TEROBFUSKASI CFF",
+        "jump_in_ida": "Lompat di IDA",
+        "target_func_lbl": "Fungsi Target:",
+        "func_range": "Rentang: {start} - {end} ({size} byte)",
+        "btn_deobfuscate": "Deobfuskasi && Jelaskan",
+        "btn_suggest_renames": "Saran Ubah Nama",
+        "btn_apply_renames": "Terapkan Nama ke IDA",
+        "btn_send_to_agent": "Kirim ke {agent}",
+        "ai_placeholder": "Analisis agen, ringkasan kode semu hasil deobfuskasi, dan penalaran reverse engineering akan tampil di sini...",
+        "ask_placeholder": "Tanya {agent}: misal 'Bagaimana cara bypass pemeriksaan ini?', 'Jelaskan logika CFF'...",
+        "ask_btn": "Tanya {agent}",
+        "copy_c_code": "Salin Kode C",
+        "save_c_file": "Simpan ke ida_current_function.c",
+        "c_copied": "Kode semu berhasil disalin ke papan klip!",
+        "c_saved": "Berhasil menyimpan dan mengekspor '{name}'!",
+        "callers_header": "Pemanggil ({count} fungsi memanggil ini):",
+        "callees_header": "Dipanggil ({count} subrutin dipanggil):",
+        "log_stream_title": "Aliran Langsung RPC MCP: Terhubung ke {agent}",
+        "filter_event_lbl": "Saring Peristiwa:",
+        "all_events": "Semua Peristiwa",
+        "agent_calls": "Panggilan Agen",
+        "agent_success": "Agen Berhasil",
+        "errors": "Kesalahan",
+        "ui_actions": "Aksi Antarmuka",
+        "clear_log": "Bersihkan Log",
+        "custom_agent_title": "Konfigurasi Agen AI Kustom & Penyedia Model",
+        "direct_llm_mode": "Mode LLM Langsung",
+        "provider_name_lbl": "Nama Penyedia:",
+        "base_url_lbl": "URL Basis:",
+        "api_key_lbl": "Kunci API:",
+        "api_key_placeholder": "Masukkan Kunci API (tersimpan terenkripsi)",
+        "show_key": "Tampilkan",
+        "hide_key": "Sembunyikan",
+        "model_id_lbl": "ID Model:",
+        "model_combo_tooltip": "Daftar model dinamis dari penyedia API atau input manual",
+        "models_count": "({count} model)",
+        "fetch_models": "Ambil Model",
+        "refresh_models": "Segarkan Model",
+        "fetching_models": "Mengambil...",
+        "test_selected_model": "Uji Model Terpilih",
+        "testing_model": "Menguji Model...",
+        "save_agent_config": "Simpan Konfigurasi Agen",
+        "fetch_status_initial": "Status: Belum diambil (klik 'Ambil Model' atau isi URL Basis & Kunci API)",
+        "fetch_status_fetching": "Mengambil daftar model dari penyedia...",
+        "fetch_status_success": "Berhasil mengambil: {count} model dimuat pada {time}",
+        "fetch_status_empty": "Daftar kosong: Penyedia mengembalikan daftar kosong pada {time}",
+        "fetch_status_failed": "Gagal mengambil model ({time}): {msg}",
+        "testing_endpoint": "Menguji endpoint MCP di http://127.0.0.1:13337/mcp...",
+        "conn_success": "BERHASIL: {msg}",
+        "conn_failed": "GAGAL: {msg}",
+        "jumped_to": "Melompat di IDA ke {name}",
+        "no_func_selected": "Tidak ada fungsi aktif yang dipilih.",
+        "renamed_success": "Berhasil mengubah nama {count} variabel pada tampilan Hex-Rays!",
+        "no_renames": "Tidak ada nama variabel yang perlu diubah",
+        "click_apply_renames": "Klik <b>'Terapkan Nama ke IDA'</b> untuk menerapkan saran nama variabel langsung ke kode semu Hex-Rays.",
+        "lang_selector_lbl": "Bahasa:",
+        "cat_nav": "Navigasi",
+        "cat_calls": "Panggilan",
+        "cat_mod": "Modifikasi",
+        "cat_stack": "Stack",
+        "cat_struct": "Struktur",
+        "cat_mem": "Memori",
+        "cat_dbg": "Debugger"
+    }
+}
+
 class McpDashboardState:
     server = None
     tab_instance = None
@@ -2450,6 +2666,7 @@ class McpDashboardState:
     last_rename_suggestions = []
     total_rpc_requests = 0
     rpc_stats = {}
+    current_language = "en"
 
     session_file_path = r"c:\Users\user\Documents\project\ida_active_session.json"
     func_export_file = r"c:\Users\user\Documents\project\ida_current_function.c"
@@ -2457,9 +2674,9 @@ class McpDashboardState:
     chat_file_path = r"c:\Users\user\Documents\project\ida_agent_chat.json"
     config_file_path = r"c:\Users\user\Documents\project\ida_agent_config.json"
 
-    # Default Agent Profiles
     agent_config = {
         "active_agent": "Antigravity",
+        "language": "en",
         "agents": {
             "Antigravity": {
                 "name": "Antigravity Agent",
@@ -2508,6 +2725,33 @@ class McpDashboardState:
 
     _SECRET_SALT = "ida_pro_mcp_salt_secure_2026"
     _models_cache = {}
+
+    @classmethod
+    def get_language(cls) -> str:
+        if hasattr(cls, "current_language") and cls.current_language in ("en", "id"):
+            return cls.current_language
+        return "en"
+
+    @classmethod
+    def set_language(cls, lang: str):
+        if lang in ("en", "id"):
+            cls.current_language = lang
+            cls.agent_config["language"] = lang
+            cls.save_agent_config()
+            if cls.tab_instance and hasattr(cls.tab_instance, "apply_language"):
+                cls.tab_instance.apply_language(lang)
+
+    @classmethod
+    def t(cls, key: str, **kwargs) -> str:
+        lang = cls.get_language()
+        dict_lang = DASHBOARD_I18N.get(lang, DASHBOARD_I18N["en"])
+        val = dict_lang.get(key, DASHBOARD_I18N["en"].get(key, key))
+        if kwargs:
+            try:
+                return val.format(**kwargs)
+            except Exception:
+                return val
+        return val
 
     @classmethod
     def encode_secret(cls, raw: str) -> str:
@@ -2604,29 +2848,47 @@ class McpDashboardState:
         except Exception:
             pass
 
-        if code == 400:
-            return f"HTTP 400 Bad Request: Parameter request tidak valid. {detail}"
-        elif code in (401, 403):
-            return f"HTTP {code} Unauthorized: API Key salah atau hak akses tidak memadai. {detail}"
-        elif code == 402:
-            return f"HTTP 402 Payment Required: Credit balance atau kuota token API key tidak mencukupi. {detail}"
-        elif code == 404:
-            return f"HTTP 404 Not Found: Endpoint /models atau model tidak ditemukan. {detail}"
-        elif code == 429:
-            return f"HTTP 429 Rate Limit: Batas kuota atau rate limit terlampaui. {detail}"
-        elif code >= 500:
-            return f"HTTP {code} Server Error: Gangguan pada server provider. {detail}"
-        return f"HTTP {code} Error: {detail if detail else err.reason}"
+        lang = cls.get_language()
+        if lang == "id":
+            if code == 400:
+                return f"HTTP 400 Bad Request: Parameter request tidak valid. {detail}"
+            elif code in (401, 403):
+                return f"HTTP {code} Unauthorized: Kunci API salah atau hak akses tidak memadai. {detail}"
+            elif code == 402:
+                return f"HTTP 402 Payment Required: Saldo kredit atau kuota token tidak mencukupi. {detail}"
+            elif code == 404:
+                return f"HTTP 404 Not Found: Endpoint /models atau model tidak ditemukan. {detail}"
+            elif code == 429:
+                return f"HTTP 429 Rate Limit: Batas kuota atau kecepatan permintaan terlampaui. {detail}"
+            elif code >= 500:
+                return f"HTTP {code} Server Error: Gangguan pada server penyedia model. {detail}"
+            return f"HTTP {code} Error: {detail if detail else err.reason}"
+        else:
+            if code == 400:
+                return f"HTTP 400 Bad Request: Invalid request parameters. {detail}"
+            elif code in (401, 403):
+                return f"HTTP {code} Unauthorized: Invalid API key or insufficient permissions. {detail}"
+            elif code == 402:
+                return f"HTTP 402 Payment Required: Insufficient credit balance or token quota. {detail}"
+            elif code == 404:
+                return f"HTTP 404 Not Found: Endpoint /models or model ID not found. {detail}"
+            elif code == 429:
+                return f"HTTP 429 Rate Limit: Request limit or token quota exceeded. {detail}"
+            elif code >= 500:
+                return f"HTTP {code} Server Error: Provider service disruption. {detail}"
+            return f"HTTP {code} Error: {detail if detail else err.reason}"
 
     @classmethod
     def fetch_provider_models(cls, provider: str, base_url: str, api_key: str, force_refresh: bool = False):
         norm_url = cls.normalize_base_url(base_url, provider)
         cache_key = f"{provider}:{norm_url}"
         now = time.time()
+        lang = cls.get_language()
         if not force_refresh and cache_key in cls._models_cache:
             cached = cls._models_cache[cache_key]
             if now - cached.get("timestamp", 0) < 3600:
-                return True, cached.get("models", []), f"Memuat {len(cached.get('models', []))} model dari cache lokal"
+                msg = f"Memuat {len(cached.get('models', []))} model dari cache lokal" if lang == "id" else f"Loaded {len(cached.get('models', []))} models from local cache"
+                return True, cached.get("models", []), msg
 
         models_url = cls.build_models_url(norm_url, provider)
         headers = {"Content-Type": "application/json", "User-Agent": "IDAPRO-MCP-Client/2.0"}
@@ -2644,9 +2906,11 @@ class McpDashboardState:
                 data = json.loads(raw_bytes.decode("utf-8"))
                 parsed = cls.parse_models_response(data, provider)
                 if not parsed:
-                    return False, [], "Endpoint /models berhasil diakses namun tidak menemukan model yang valid (daftar kosong)"
+                    msg = "Endpoint /models berhasil diakses namun tidak menemukan model (daftar kosong)" if lang == "id" else "Endpoint /models reached but no valid models returned (empty list)"
+                    return False, [], msg
                 cls._models_cache[cache_key] = {"timestamp": now, "models": parsed}
-                return True, parsed, f"Berhasil memuat {len(parsed)} model dari provider"
+                msg = f"Berhasil memuat {len(parsed)} model dari penyedia" if lang == "id" else f"Successfully loaded {len(parsed)} models from provider"
+                return True, parsed, msg
         except urllib.error.HTTPError as e:
             if e.code == 404 and not norm_url.endswith("/v1") and "/models" in models_url:
                 alt_url = f"{norm_url}/models" if "/v1/models" in models_url else f"{norm_url}/v1/models"
@@ -2658,38 +2922,44 @@ class McpDashboardState:
                         parsed = cls.parse_models_response(data, provider)
                         if parsed:
                             cls._models_cache[cache_key] = {"timestamp": now, "models": parsed}
-                            return True, parsed, f"Berhasil memuat {len(parsed)} model dari provider (alt endpoint)"
+                            msg = f"Berhasil memuat {len(parsed)} model dari penyedia (alt endpoint)" if lang == "id" else f"Loaded {len(parsed)} models from provider (alt endpoint)"
+                            return True, parsed, msg
                 except Exception:
                     pass
             msg = cls._format_http_error(e, api_key)
             return False, [], msg
         except urllib.error.URLError as e:
-            return False, [], f"Koneksi gagal atau DNS timeout: {e.reason}"
+            msg = f"Koneksi gagal atau DNS timeout: {e.reason}" if lang == "id" else f"Connection failed or DNS timeout: {e.reason}"
+            return False, [], msg
         except (json.JSONDecodeError, ValueError) as e:
-            return False, [], f"Respons JSON malformed dari endpoint /models: {e}"
+            msg = f"Respons JSON malformed dari endpoint /models: {e}" if lang == "id" else f"Malformed JSON response from /models: {e}"
+            return False, [], msg
         except Exception as e:
             clean_err = str(e).replace(api_key, "sk-***") if api_key else str(e)
-            return False, [], f"Gagal mengambil model: {clean_err}"
+            msg = f"Gagal mengambil model: {clean_err}" if lang == "id" else f"Failed to fetch models: {clean_err}"
+            return False, [], msg
 
     @classmethod
     def test_provider_connection(cls, provider: str, base_url: str, api_key: str):
         t0 = time.time()
         ok, models, msg = cls.fetch_provider_models(provider, base_url, api_key, force_refresh=True)
         dt = int((time.time() - t0) * 1000)
+        lang = cls.get_language()
         if ok:
-            return True, f"Connection OK (HTTP 200 in {dt} ms) - Provider API terhubung"
-        return False, f"Connection Test Gagal ({dt} ms): {msg}"
+            return True, f"Connection OK (HTTP 200 in {dt} ms) - Provider API online" if lang != "id" else f"Koneksi Berhasil (HTTP 200 dalam {dt} ms) - API Penyedia Terhubung"
+        return False, f"Connection Test Failed ({dt} ms): {msg}" if lang != "id" else f"Uji Koneksi Gagal ({dt} ms): {msg}"
 
     @classmethod
     def test_selected_model_inference(cls, provider: str, base_url: str, api_key: str, model_id: str):
+        lang = cls.get_language()
         if not model_id:
-            return False, "Model ID belum dipilih"
+            return False, "Model ID belum dipilih" if lang == "id" else "No Model ID selected"
         norm_url = cls.normalize_base_url(base_url, provider)
         t0 = time.time()
         try:
             if provider.lower() == "gemini":
                 if not api_key:
-                    return False, "API Key wajib diisi untuk menguji model Gemini"
+                    return False, "Kunci API wajib diisi untuk menguji model Gemini" if lang == "id" else "API Key is required to test Gemini model"
                 url = f"{norm_url}/models/{model_id}:generateContent?key={api_key}"
                 payload = {"contents": [{"parts": [{"text": "Reply OK"}]}], "generationConfig": {"maxOutputTokens": 5}}
                 req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
@@ -2697,8 +2967,8 @@ class McpDashboardState:
                     data = json.loads(resp.read().decode("utf-8"))
                     dt = int((time.time() - t0) * 1000)
                     if "candidates" in data:
-                        return True, f"Model '{model_id}' terverifikasi siap inferensi ({dt} ms)"
-                    return False, f"Respons Gemini tidak terduga: {list(data.keys())}"
+                        return True, f"Model '{model_id}' terverifikasi siap inferensi ({dt} ms)" if lang == "id" else f"Model '{model_id}' verified ready for inference ({dt} ms)"
+                    return False, f"Unexpected response from Gemini: {list(data.keys())}"
             else:
                 chat_url = f"{norm_url}/chat/completions" if not norm_url.endswith("/chat/completions") else norm_url
                 headers = {"Content-Type": "application/json", "User-Agent": "IDAPRO-MCP-Client/2.0"}
@@ -2715,16 +2985,16 @@ class McpDashboardState:
                     data = json.loads(resp.read().decode("utf-8"))
                     dt = int((time.time() - t0) * 1000)
                     if "choices" in data and len(data["choices"]) > 0:
-                        return True, f"Model '{model_id}' terverifikasi siap inferensi ({dt} ms)"
-                    return False, "Provider mengembalikan HTTP 200 namun response tidak memiliki 'choices'"
+                        return True, f"Model '{model_id}' terverifikasi siap inferensi ({dt} ms)" if lang == "id" else f"Model '{model_id}' verified ready for inference ({dt} ms)"
+                    return False, "Provider returned HTTP 200 but response lacks choices"
         except urllib.error.HTTPError as e:
             msg = cls._format_http_error(e, api_key)
-            return False, f"Inference Test Gagal: {msg}"
+            return False, f"Inference Test Gagal: {msg}" if lang == "id" else f"Inference Test Failed: {msg}"
         except urllib.error.URLError as e:
-            return False, f"Inference Test Gagal: Gangguan jaringan/DNS ({e.reason})"
+            return False, f"Inference Test Gagal: Gangguan jaringan ({e.reason})" if lang == "id" else f"Inference Test Failed: Network error ({e.reason})"
         except Exception as e:
             clean_err = str(e).replace(api_key, "sk-***") if api_key else str(e)
-            return False, f"Inference Test Gagal: {clean_err}"
+            return False, f"Inference Test Gagal: {clean_err}" if lang == "id" else f"Inference Test Failed: {clean_err}"
 
     @classmethod
     def save_custom_agent_config(cls, provider: str, base_url: str, api_key: str, model: str):
@@ -2743,7 +3013,7 @@ class McpDashboardState:
             if "api_key" in direct_cfg:
                 del direct_cfg["api_key"]
         cls.save_agent_config()
-        cls.log_event("ui_action", f"Konfigurasi AI Agent disimpan: {provider} | Model: {model}")
+        cls.log_event("ui_action", f"AI Agent configuration saved: {provider} | Model: {model}")
 
     @classmethod
     def load_agent_config(cls):
@@ -2751,6 +3021,9 @@ class McpDashboardState:
             if os.path.isfile(cls.config_file_path):
                 with open(cls.config_file_path, "r", encoding="utf-8") as f:
                     saved = json.load(f)
+                    if "language" in saved and saved["language"] in ("en", "id"):
+                        cls.current_language = saved["language"]
+                        cls.agent_config["language"] = saved["language"]
                     if "active_agent" in saved:
                         cls.agent_config["active_agent"] = saved["active_agent"]
                     if "agents" in saved:
@@ -2773,6 +3046,7 @@ class McpDashboardState:
     def save_agent_config(cls):
         try:
             os.makedirs(os.path.dirname(cls.config_file_path), exist_ok=True)
+            cls.agent_config["language"] = cls.get_language()
             with open(cls.config_file_path, "w", encoding="utf-8") as f:
                 json.dump(cls.agent_config, f, indent=2)
         except Exception:
@@ -2828,6 +3102,7 @@ class McpDashboardState:
 
     @classmethod
     def test_mcp_connection(cls):
+        lang = cls.get_language()
         try:
             t0 = time.time()
             payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "get_metadata", "params": []}).encode("utf-8")
@@ -2839,7 +3114,8 @@ class McpDashboardState:
                     mod = "IDA Binary"
                     if isinstance(data["result"], dict):
                         mod = data["result"].get("module", "IDA Binary")
-                    return True, f"Online & Responsive ({dt} ms) - Module: {mod}"
+                    msg = f"Online & Responsif ({dt} ms) - Modul: {mod}" if lang == "id" else f"Online & Responsive ({dt} ms) - Module: {mod}"
+                    return True, msg
                 return False, f"Server returned error: {data.get('error')}"
         except Exception as e:
             try:
@@ -2850,7 +3126,7 @@ class McpDashboardState:
                     data = json.loads(resp.read().decode("utf-8"))
                     dt = int((time.time() - t0) * 1000)
                     if "result" in data:
-                        return True, f"Online & Responsive ({dt} ms)"
+                        return True, f"Online & Responsif ({dt} ms)" if lang == "id" else f"Online & Responsive ({dt} ms)"
                     return False, f"Server returned error: {data.get('error')}"
             except Exception:
                 pass
@@ -2903,135 +3179,81 @@ class McpDashboardState:
         return info
 
     @classmethod
-    def get_current_function_details(cls, ea=None):
+    def get_current_function_details(cls, target_ea=None):
         try:
             import ida_kernwin
             import ida_funcs
-            import idc
+            import ida_hexrays
 
-            if ea is None:
-                if cls.current_selected_func is not None:
-                    ea = cls.current_selected_func
-                else:
-                    ea = ida_kernwin.get_screen_ea()
-            if ea == idc.BADADDR:
-                ea = 0
-
+            ea = target_ea if target_ea is not None else ida_kernwin.get_screen_ea()
             func = ida_funcs.get_func(ea)
-            if not func and cls.current_selected_func is not None:
-                func = ida_funcs.get_func(cls.current_selected_func)
             if not func:
-                func = ida_funcs.get_func(ida_kernwin.get_screen_ea())
-            if not func:
-                first_func = ida_funcs.get_next_func(0)
-                if first_func:
-                    func = first_func
-                else:
-                    return {
-                        "name": "Outside function",
-                        "ea": hex(ea),
-                        "start": hex(ea),
-                        "end": hex(ea),
-                        "size": 0,
-                        "pseudocode": "// Cursor is currently outside a defined function.\n// Select a function from the dropdown above or click one in the Functions list."
-                    }
+                lang = cls.get_language()
+                no_code_msg = "[Kursor saat ini berada di luar fungsi yang terdefinisi]" if lang == "id" else "[Cursor is currently outside a defined function]"
+                return {
+                    "name": "Outside Function",
+                    "start": hex(ea),
+                    "end": hex(ea),
+                    "size": 0,
+                    "pseudocode": no_code_msg,
+                    "has_cff": False
+                }
 
-            func_name = ida_funcs.get_func_name(func.start_ea)
-            cls.current_selected_func = func.start_ea
-            pseudocode = None
+            fname = ida_funcs.get_func_name(func.start_ea)
+            size = func.end_ea - func.start_ea
+            pseudocode = ""
+            has_cff = False
 
-            # Try Hex-Rays Decompiler
             try:
-                import ida_hexrays
-                if ida_hexrays.init_hexrays_plugin():
-                    cfunc = ida_hexrays.decompile(func.start_ea)
-                    if cfunc:
-                        pseudocode = str(cfunc)
+                error = ida_hexrays.hexrays_failure_t()
+                cfunc = ida_hexrays.decompile_func(func, error, ida_hexrays.DECOMP_WARNINGS)
+                if cfunc:
+                    lines = [str(line) for line in cfunc.get_pseudocode()]
+                    pseudocode = "\n".join(lines)
+                    label_count = len(re.findall(r"LABEL_\d+:", pseudocode))
+                    goto_count = len(re.findall(r"goto\s+LABEL_\d+", pseudocode))
+                    if label_count >= 6 and goto_count >= 6:
+                        has_cff = True
             except Exception:
                 pass
 
-            # Fallback to disassembly
             if not pseudocode:
                 try:
                     import idautils
-                    import ida_lines
-                    lines = [f"// Disassembly for {func_name} ({hex(func.start_ea)} - {hex(func.end_ea)})"]
-                    count = 0
-                    for item in idautils.FuncItems(func.start_ea):
-                        if count > 200:
-                            lines.append("  // ... [truncated for preview]")
-                            break
-                        disasm = idc.generate_disasm_line(item, 0)
-                        clean_line = ida_lines.tag_remove(disasm) if disasm else ""
-                        lines.append(f"  {hex(item)}: {clean_line}")
-                        count += 1
+                    lines = [f"[Disassembly for {fname} ({hex(func.start_ea)})]"]
+                    for head in idautils.Heads(func.start_ea, min(func.start_ea + 128, func.end_ea)):
+                        lines.append(f"{hex(head)}: {idaapi.generate_disasm_line(head, 0)}")
+                    if func.end_ea - func.start_ea > 128:
+                        lines.append("  ... [truncated for preview]")
                     pseudocode = "\n".join(lines)
                 except Exception as e:
-                    pseudocode = f"// Error generating code: {e}"
+                    pseudocode = f"[Error generating code: {e}]"
 
-            lines_list = pseudocode.splitlines() if pseudocode else []
-            has_cff = any("LABEL_" in l for l in lines_list) and len([l for l in lines_list if "goto" in l or "break" in l or "case" in l]) >= 4
-            
             return {
-                "name": func_name,
-                "ea": hex(ea),
+                "name": fname,
                 "start": hex(func.start_ea),
                 "end": hex(func.end_ea),
-                "size": func.end_ea - func.start_ea,
+                "size": size,
                 "pseudocode": pseudocode,
-                "has_cff": has_cff,
-                "line_count": len(lines_list)
+                "has_cff": has_cff
             }
         except Exception:
             return None
-
-    @classmethod
-    def sync_active_session(cls):
-        try:
-            bin_info = cls.get_binary_info()
-            func_info = cls.get_current_function_details()
-            session_data = {
-                "timestamp": datetime.datetime.now().isoformat(),
-                "server_url": "http://127.0.0.1:13337/mcp",
-                "active_agent": cls.get_active_agent_key(),
-                "total_rpc_requests": cls.total_rpc_requests,
-                "binary": bin_info,
-                "current_function": func_info,
-                "recent_activity": cls.event_history[-25:]
-            }
-            os.makedirs(os.path.dirname(cls.session_file_path), exist_ok=True)
-            with open(cls.session_file_path, "w", encoding="utf-8") as f:
-                json.dump(session_data, f, indent=2)
-        except Exception:
-            pass
-
-    @classmethod
-    def on_ea_changed(cls, ea):
-        try:
-            import ida_funcs
-            func = ida_funcs.get_func(ea)
-            if func:
-                cls.current_selected_func = func.start_ea
-            cls.last_cursor_ea = ea
-            cls.sync_active_session()
-            if cls.tab_instance and hasattr(cls.tab_instance, "refresh_cursor_info"):
-                cls.tab_instance.refresh_cursor_info(ea)
-        except Exception:
-            pass
 
     @classmethod
     def export_current_function_for_agent(cls):
         try:
             func_info = cls.get_current_function_details()
             if not func_info:
-                return False, "No active function selected"
+                return False, "No active function"
 
             agent_info = cls.get_active_agent_info()
-            agent_name = agent_info.get("name", "Active Agent")
+            agent_name = agent_info.get("name", "User Agent")
+            lang = cls.get_language()
 
-            content = f"/* Function: {func_info['name']} ({func_info['start']} - {func_info['end']}) */\n"
+            content = f"/* Function: {func_info['name']} ({func_info['start']} - {func_info['end']}, size: {func_info['size']} bytes) */\n"
             content += f"/* Prepared for: {agent_name} via IDA Pro MCP Server (http://127.0.0.1:13337/mcp) */\n\n"
-            content += func_info.get("pseudocode", "// No code available")
+            content += func_info.get("pseudocode", "[No code available]")
 
             os.makedirs(os.path.dirname(cls.func_export_file), exist_ok=True)
             with open(cls.func_export_file, "w", encoding="utf-8") as f:
@@ -3040,8 +3262,10 @@ class McpDashboardState:
             if QtWidgets:
                 QtWidgets.QApplication.clipboard().setText(content)
 
-            cls.log_event("ui_action", f"Exported function '{func_info['name']}' for {agent_name} to {cls.func_export_file}")
-            return True, func_info['name']
+            cls.export_full_context_for_agent()
+            notice = f"Fungsi '{func_info['name']}' diekspor untuk {agent_name}" if lang == "id" else f"Function '{func_info['name']}' exported for {agent_name}"
+            cls.log_event("ui_action", notice)
+            return True, func_info["name"]
         except Exception as e:
             return False, str(e)
 
@@ -3065,6 +3289,7 @@ class McpDashboardState:
             context_data = {
                 "generated": datetime.datetime.now().isoformat(),
                 "agent": agent_info.get("name", "User Agent"),
+                "language": cls.get_language(),
                 "binary": bin_info,
                 "current_focus": func_info,
                 "function_sample": func_list
@@ -3079,15 +3304,13 @@ class McpDashboardState:
         except Exception as e:
             return False, str(e)
 
-    # ==========================================================================
-    # Deep Reverse Engineering Analysis Engine (Local + Semantic Context)
-    # ==========================================================================
     @classmethod
     def inspect_function_semantics(cls, func_info):
         code = func_info.get("pseudocode", "")
         ea = int(func_info["start"], 16)
         fname = func_info["name"]
         size = func_info.get("size", 0)
+        lang = cls.get_language()
 
         keywords = {
             "if", "while", "for", "switch", "return", "sizeof", "__asm", "case", "else", "goto", "do",
@@ -3126,27 +3349,27 @@ class McpDashboardState:
         is_ioctl = any(k in code.lower() for k in ["ioctl", "sock", "/dev/", "ipc"]) or ("anosdk" in fname.lower() and "ioctl" in fname.lower())
 
         if is_cff:
-            category = "OLLVM Control Flow Flattening (CFF)"
+            category = "OLLVM Control Flow Flattening (CFF)" if lang != "id" else "OLLVM Control Flow Flattening (CFF Terobfuskasi)"
             badge_color = "#e5c07b"
             badge_bg = "#3b2d1d"
         elif is_singleton:
-            category = "Thread-Safe Singleton / Lazy Instance Factory"
+            category = "Thread-Safe Singleton / Lazy Instance Factory" if lang != "id" else "Pabrik Instansi Tunggal Aman-Thread (Thread-Safe Singleton)"
             badge_color = "#56b6c2"
             badge_bg = "#1b3338"
         elif is_constructor:
-            category = "Object Initializer / C++ Struct Setup"
+            category = "Object Initializer / C++ Struct Setup" if lang != "id" else "Inisialisasi Objek / Setup Struktur C++"
             badge_color = "#c678dd"
             badge_bg = "#341f38"
         elif is_crypto:
-            category = "Cryptographic / Hash / Arithmetic Transform"
+            category = "Cryptographic / Hash / Arithmetic Transform" if lang != "id" else "Transformasi Kriptografi / Hash / Aritmatika"
             badge_color = "#d19a66"
             badge_bg = "#38291a"
         elif is_ioctl:
-            category = "Kernel Driver / IOCTL Security Handler"
+            category = "Kernel Driver / IOCTL Security Handler" if lang != "id" else "Driver Kernel / Pengendali Keamanan IOCTL"
             badge_color = "#e06c75"
             badge_bg = "#381c20"
         else:
-            category = "Standard Linear Subroutine"
+            category = "Standard Linear Subroutine" if lang != "id" else "Subrutin Linear Standar"
             badge_color = "#98c379"
             badge_bg = "#1f3325"
 
@@ -3194,8 +3417,9 @@ class McpDashboardState:
     @classmethod
     def analyze_function_deobfuscation(cls):
         func_info = cls.get_current_function_details()
+        lang = cls.get_language()
         if not func_info or not func_info.get("pseudocode"):
-            return "No function or pseudocode available for analysis."
+            return "No function or pseudocode available for analysis." if lang != "id" else "Tidak ada fungsi atau kode semu yang tersedia untuk dianalisis."
 
         fname = func_info["name"]
         code = func_info["pseudocode"]
@@ -3213,188 +3437,335 @@ class McpDashboardState:
                 if vn in [r[0] for r in rename_suggs]:
                     continue
                 if lv["is_array"]:
-                    rename_suggs.append((vn, "init_param_buf", "Buffer stack parameter 16-byte untuk inisialisasi objek"))
+                    desc_s = "16-byte stack parameter buffer for object initialization" if lang != "id" else "Buffer parameter stack 16-byte untuk inisialisasi objek"
+                    rename_suggs.append((vn, "init_param_buf", desc_s))
                 elif vn == alloc_var:
-                    rename_suggs.append((vn, "p_singleton_inst", "Pointer objek instance hasil alokasi heap (264 byte)"))
+                    desc_s = "Heap allocated instance object pointer (264 bytes)" if lang != "id" else "Pointer objek instansi hasil alokasi heap (264 byte)"
+                    rename_suggs.append((vn, "p_singleton_inst", desc_s))
                 elif "qword_" in code:
-                    rename_suggs.append((vn, "cached_global_inst", "Pointer penampung instance objek global yang sudah ada"))
+                    desc_s = "Existing global instance object cache pointer" if lang != "id" else "Pointer penampung instansi objek global yang sudah ada"
+                    rename_suggs.append((vn, "cached_global_inst", desc_s))
                 else:
-                    rename_suggs.append((vn, f"inst_var_{vn}", "Variabel temporary saat inisialisasi singleton"))
+                    desc_s = "Temporary variable during singleton initialization" if lang != "id" else "Variabel sementara saat inisialisasi singleton"
+                    rename_suggs.append((vn, f"inst_var_{vn}", desc_s))
         elif sem["is_cff"]:
             if sem["state_candidates"]:
                 s_var = sem["state_candidates"][0]
-                rename_suggs.append((s_var, "cff_state_dispatcher", "Control flow flattening main state dispatcher variable"))
+                desc_s = "Control flow flattening main state dispatcher variable" if lang != "id" else "Variabel pengatur status utama perataan alur kontrol"
+                rename_suggs.append((s_var, "cff_state_dispatcher", desc_s))
                 if len(sem["state_candidates"]) > 1:
                     sec_var = [v for v in sem["state_candidates"] if v != s_var][0]
-                    rename_suggs.append((sec_var, f"cff_substate_{sec_var}", "Secondary state branch selector variable"))
+                    desc_s = "Secondary state branch selector variable" if lang != "id" else "Variabel pemilih cabang status sekunder"
+                    rename_suggs.append((sec_var, f"cff_substate_{sec_var}", desc_s))
             for lv in sem["local_vars"]:
                 if lv["is_array"] and lv["name"] not in [r[0] for r in rename_suggs]:
-                    rename_suggs.append((lv["name"], "payload_data_buf", "Local stack memory buffer for payload/IPC"))
+                    desc_s = "Local stack memory buffer for payload/IPC" if lang != "id" else "Buffer memori stack lokal untuk muatan/IPC"
+                    rename_suggs.append((lv["name"], "payload_data_buf", desc_s))
             for lv in sem["local_vars"]:
                 if lv["name"] not in [r[0] for r in rename_suggs] and len(rename_suggs) < 6:
-                    rename_suggs.append((lv["name"], f"cff_intermediate_{lv['name']}", "Intermediate calculation variable in flattened block"))
+                    desc_s = "Intermediate calculation variable in flattened block" if lang != "id" else "Variabel komputasi perantara dalam blok terobfuskasi"
+                    rename_suggs.append((lv["name"], f"cff_intermediate_{lv['name']}", desc_s))
         elif sem["is_constructor"]:
             for lv in sem["local_vars"]:
                 if lv["is_array"]:
-                    rename_suggs.append((lv["name"], "struct_seed_buf", "Initial parameter seed buffer for constructor"))
+                    desc_s = "Initial parameter seed buffer for constructor" if lang != "id" else "Buffer bibit parameter awal untuk konstruktor"
+                    rename_suggs.append((lv["name"], "struct_seed_buf", desc_s))
                 elif lv["name"] not in [r[0] for r in rename_suggs]:
-                    rename_suggs.append((lv["name"], f"obj_member_{lv['name']}", "Pointer / member temporary value in struct initializer"))
+                    desc_s = "Pointer / member temporary value in struct initializer" if lang != "id" else "Nilai sementara pointer atau anggota pada inisialisasi struktur"
+                    rename_suggs.append((lv["name"], f"obj_member_{lv['name']}", desc_s))
         elif sem["is_crypto"]:
             for lv in sem["local_vars"]:
                 if lv["is_array"]:
-                    rename_suggs.append((lv["name"], "cipher_block_buf", "Buffer block input/output untuk kalkulasi kriptografi"))
+                    desc_s = "Input/output buffer block for cryptographic calculation" if lang != "id" else "Buffer blok masukan/keluaran untuk kalkulasi kriptografi"
+                    rename_suggs.append((lv["name"], "cipher_block_buf", desc_s))
                 else:
-                    rename_suggs.append((lv["name"], f"hash_state_{lv['name']}", "State accumulator / mask nilai hash"))
+                    desc_s = "Hash state accumulator / bitwise mask" if lang != "id" else "Akumulator status hash atau mask bitwise"
+                    rename_suggs.append((lv["name"], f"hash_state_{lv['name']}", desc_s))
         else:
             for lv in sem["local_vars"]:
                 if lv["is_array"]:
-                    rename_suggs.append((lv["name"], f"stack_buf_{lv['name']}", "Stack memory working buffer"))
+                    desc_s = "Stack memory working buffer" if lang != "id" else "Buffer kerja memori stack"
+                    rename_suggs.append((lv["name"], f"stack_buf_{lv['name']}", desc_s))
                 elif "return " + lv["name"] in code:
-                    rename_suggs.append((lv["name"], f"ret_status_{lv['name']}", "Return value status code"))
+                    desc_s = "Return value status code" if lang != "id" else "Kode status nilai kembalian"
+                    rename_suggs.append((lv["name"], f"ret_status_{lv['name']}", desc_s))
                 else:
-                    rename_suggs.append((lv["name"], f"arg_or_tmp_{lv['name']}", "Temporary intermediate computation variable"))
+                    desc_s = "Temporary intermediate computation variable" if lang != "id" else "Variabel komputasi perantara sementara"
+                    rename_suggs.append((lv["name"], f"arg_or_tmp_{lv['name']}", desc_s))
 
         cls.last_rename_suggestions = rename_suggs
 
-        if sem["is_singleton"]:
-            vtable_str = next((g for g in sem['globals'] if 'off_' in g), "vtable")
-            g_ptr = next((g for g in sem['globals'] if 'qword_' in g), "qword_global")
-            desc = f"Fungsi ini merupakan <b>Thread-Safe Singleton Factory / Object Provider</b>. Fungsinya menjamin bahwa struktur objek instance utama hanya dialokasikan tepat satu kali di memori heap (menggunakan <code>pthread_once</code>) dan kemudian dicache pada pointer global <code>{g_ptr}</code> agar dapat diakses oleh seluruh thread game/driver."
-            wf_title = "Alur Kerja Inisialisasi Singleton (Thread-Safe Lazy Initialization):"
-            wf_steps = [
-                f"<b>Fast-Path Cache Check:</b> Memeriksa apakah pointer global <code>{g_ptr}</code> telah dialokasikan sebelumnya. Jika sudah ada, langsung return instance tanpa locking overhead.",
-                f"<b>Thread-Safe Routine:</b> Jika masih NULL, memanggil <code>pthread_once</code> bersama fungsi routine <code>{sem['calls'][1] if len(sem['calls']) > 1 else 'init_func'}</code> agar alokasi aman terhadap race condition.",
-                "<b>Heap Allocation:</b> Mengalokasikan memory heap berukuran 264 byte melalui sub-allocator <code>sub_519AE0(264LL)</code>.",
-                f"<b>Object Construction & VTable:</b> Memanggil sub-konstruktor <code>{sem['calls'][-1] if sem['calls'] else 'sub_ctor'}</code>, memasang virtual method table <code>{vtable_str}</code>, dan mengkonfigurasi offset member.",
-                f"<b>Penyimpanan Cache & Return:</b> Menyimpan pointer objek yang telah siap ke variabel global <code>{g_ptr}</code> dan mengembalikannya ke caller."
-            ]
-            strat_hook = f"""
-            <li><b>Hook Return Value:</b> Pasang Frida hook pada return fungsi <code>{fname}</code> (<code>{ea_str}</code>) untuk memperoleh pointer memori instansi objek yang dialokasikan.</li>
-            <li><b>Inspect Object VTable:</b> Pointer vtable <code>{vtable_str}</code> dapat dieksplorasi di memory untuk memetakan fungsi-fungsi virtual objek ini.</li>
-            """
-        elif sem["is_cff"]:
-            desc = "Fungsi ini terobfuskasi menggunakan <b>OLLVM Control Flow Flattening (CFF)</b>. Alur percabangan dan perulangan telah dipecah menjadi basic blocks independen yang dikendalikan oleh variabel dispatcher state machine."
-            wf_title = "Struktur Eksekusi State Machine (De-flattened):"
-            s_var = sem["state_candidates"][0] if sem["state_candidates"] else "dispatcher_var"
-            wf_steps = [
-                f"<b>State 0 (Dispatcher Initialization):</b> Menginisialisasi variabel state <code>{s_var}</code> dengan nilai awal.",
-                "<b>State Dispatch Loop:</b> Evaluasi kondisi state di dalam switch/if-else tree untuk mengarahkan eksekusi ke basic block berikutnya.",
-                "<b>Block Execution:</b> Menjalankan komputasi logika, verifikasi memory, atau transmisi payload di dalam basic block.",
-                "<b>State Transition & Exit:</b> Memperbarui nilai state dispatcher hingga mencapai terminal return state."
-            ]
-            strat_hook = f"""
-            <li><b>Frida Interceptor:</b> Pasang hook pada <code>{ea_str}</code> untuk memonitor parameter input dan return value.</li>
-            <li><b>Bypass State:</b> Jika fungsi memverifikasi cheat/integritas, ubah return value pada hook <code>onLeave</code> menjadi nilai sukses (misal: 0).</li>
-            """
-        elif sem["is_constructor"]:
-            desc = "Fungsi ini merupakan <b>C++ Object Initializer / Struct Constructor</b>. Berfungsi memasang tabel vtable method dan menginisialisasi properti objek."
-            wf_title = "Alur Konstruksi Struktur Objek (Object Initialization):"
-            vtable_str = next((g for g in sem['globals'] if 'off_' in g), "vtable")
-            wf_steps = [
-                "<b>Setup Buffer:</b> Menyiapkan pointer objek target dari parameter input atau heap.",
-                f"<b>VTable Binding:</b> Mengaitkan virtual method table <code>{vtable_str}</code> ke offset 0x0 objek.",
-                "<b>Field Initialization:</b> Menulis nilai atribut properti default ke offset internal objek dan melakukan zeroing memori."
-            ]
-            strat_hook = f"""
-            <li><b>Hook Instance Pointer:</b> Monitor argumen pertama (X0 / R0) yang merupakan <code>this</code> pointer dari objek yang sedang dibuat.</li>
-            """
-        elif sem["is_crypto"]:
-            desc = "Fungsi ini menjalankan <b>Cryptographic / Hash / Bitwise Transformation</b>. Menggunakan permutasi bitwise intensif (XOR, shift) untuk enkripsi data atau kalkulasi checksum integritas."
-            wf_title = "Alur Transformasi Kriptografi:"
-            wf_steps = [
-                "<b>Input & State Setup:</b> Memuat konstanta hash atau seed awal ke register working state.",
-                "<b>Permutasi Bitwise:</b> Rangkaian perulangan kalkulasi bitwise XOR, shift kiri/kanan, dan masking aritmatika.",
-                "<b>Final Digest:</b> Menggabungkan hasil transformasi ke buffer output atau return value."
-            ]
-            strat_hook = f"""
-            <li><b>Dump Buffer Input/Output:</b> Pasang hook pada <code>onEnter</code> dan <code>onLeave</code> untuk mencatat buffer sebelum dan sesudah di-transformasi.</li>
-            """
-        else:
-            desc = f"Fungsi ini memiliki alur eksekusi <b>Linear Subroutine / Standard Logic</b> (Ukuran: {size} bytes). Kode berjalan secara sekuensial tanpa pengaburan alur kontrol buatan."
-            wf_title = "Alur Eksekusi Fungsi Sekuensial (Linear Flow):"
-            calls_label = ", ".join(sem["calls"][:3]) if sem["calls"] else "operasi aritmatika internal"
-            wf_steps = [
-                "<b>Prologue:</b> Menyiapkan stack frame dan mengalokasikan ruang untuk variabel lokal.",
-                f"<b>Sub-rutin Eksekusi:</b> Memanggil sub-fungsi ({calls_label}) dan mengevaluasi percabangan logika.",
-                "<b>Epilogue & Return:</b> Menyelesaikan komputasi dan mengembalikan hasil ke pemanggil."
-            ]
-            strat_hook = f"""
-            <li><b>Parameter Tracing:</b> Pasang Frida hook pada <code>{ea_str}</code> untuk membaca argumen register X0-X3 saat fungsi dipanggil.</li>
-            """
-
-        html = f"""
-        <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; color: #dcdde4;">
-            <div style="border-bottom: 1px solid #333342; padding-bottom: 8px; margin-bottom: 12px;">
-                <span style="font-size: 15px; font-weight: bold; color: #61afef;">⚡ Semantic Analysis: {fname}</span>
-                <span style="font-size: 11px; color: #8c8f9e; margin-left: 10px;">Range: {func_info['start']} - {func_info['end']} ({size} bytes)</span>
-            </div>
-            
-            <div style="margin-bottom: 10px;">
-                <b>Classification:</b> 
-                <span style="background-color: {sem['badge_bg']}; color: {sem['badge_color']}; padding: 3px 10px; border-radius: 4px; font-weight: bold;">{sem['category']}</span>
-                {"<span style='background-color: #331f24; color: #e06c75; padding: 2px 8px; border-radius: 4px; margin-left: 6px;'>Unresolved JUMPOUT Detected</span>" if sem['has_jumpout'] else ""}
-            </div>
-
-            <p style="color: #abb2bf;">
-                <b>Fungsi Utama:</b> {desc}
-            </p>
-
-            <div style="background-color: #1f1f28; border-left: 3px solid #61afef; padding: 8px 12px; margin: 10px 0; border-radius: 0 4px 4px 0;">
-                <b style="color: #61afef;">{wf_title}</b>
-                <ol style="margin: 6px 0 6px 18px; padding: 0; color: #bcc0cc;">
-        """
-        for step in wf_steps:
-            html += f"<li>{step}</li>"
-
-        html += f"""
-                </ol>
-            </div>
-
-            <div style="margin-top: 12px;">
-                <b style="color: #98c379;">💡 Saran Variabel Rename untuk IDA Pro:</b>
-                <table style="width: 100%; margin-top: 6px; border-collapse: collapse; font-size: 11px;">
-                    <tr style="color: #7f848e; text-align: left; border-bottom: 1px solid #2d2d3a;">
-                        <th style="padding: 4px;">Var Asli</th>
-                        <th style="padding: 4px;">Saran Nama Baru</th>
-                        <th style="padding: 4px;">Tujuan & Keterangan</th>
-                    </tr>
-        """
-        if rename_suggs:
-            for orig, sugg, desc_s in rename_suggs:
-                html += f"""
-                    <tr style="border-bottom: 1px solid #252532;">
-                        <td style="padding: 5px; color: #e06c75; font-family: monospace;">{orig}</td>
-                        <td style="padding: 5px; color: #98c379; font-weight: bold; font-family: monospace;">{sugg}</td>
-                        <td style="padding: 5px; color: #abb2bf;">{desc_s}</td>
-                    </tr>
+        if lang == "id":
+            if sem["is_singleton"]:
+                vtable_str = next((g for g in sem['globals'] if 'off_' in g), "vtable")
+                g_ptr = next((g for g in sem['globals'] if 'qword_' in g), "qword_global")
+                desc = f"Fungsi ini merupakan <b>Penyedia Objek / Singleton Aman-Thread</b>. Fungsinya menjamin bahwa struktur objek instance utama hanya dialokasikan tepat satu kali di memori heap (menggunakan <code>pthread_once</code>) dan kemudian dicache pada pointer global <code>{g_ptr}</code> agar dapat diakses oleh seluruh thread game/driver."
+                wf_title = "Alur Kerja Inisialisasi Singleton (Thread-Safe Lazy Initialization):"
+                wf_steps = [
+                    f"<b>Pemeriksaan Cepat Cache:</b> Memeriksa apakah pointer global <code>{g_ptr}</code> telah dialokasikan sebelumnya. Jika sudah ada, langsung return instance tanpa locking overhead.",
+                    f"<b>Rutinitas Aman-Thread:</b> Jika masih NULL, memanggil <code>pthread_once</code> bersama fungsi rutin <code>{sem['calls'][1] if len(sem['calls']) > 1 else 'init_func'}</code> agar alokasi aman terhadap race condition.",
+                    "<b>Alokasi Heap:</b> Mengalokasikan memori heap berukuran 264 byte melalui sub-alokator <code>sub_519AE0(264LL)</code>.",
+                    f"<b>Konstruksi Objek & VTable:</b> Memanggil sub-konstruktor, memasang virtual method table <code>{vtable_str}</code>, dan mengonfigurasi offset anggota struktur.",
+                    f"<b>Penyimpanan Cache & Pengembalian:</b> Menyimpan pointer objek yang telah siap ke variabel global <code>{g_ptr}</code> dan mengembalikannya ke caller."
+                ]
+                strat_hook = f"""
+                <li><b>Hook Nilai Kembalian:</b> Pasang Frida hook pada return fungsi <code>{fname}</code> (<code>{ea_str}</code>) untuk memperoleh pointer memori instansi objek yang dialokasikan.</li>
+                <li><b>Inspeksi VTable Objek:</b> Pointer vtable <code>{vtable_str}</code> dapat dieksplorasi di memori untuk memetakan fungsi-fungsi virtual objek ini.</li>
                 """
-        else:
-            html += """
-                    <tr><td colspan="3" style="padding: 6px; color: #7f848e;">Tidak ada variabel obfuskasi agresif yang perlu di-rename otomatis.</td></tr>
-            """
-        html += f"""
-                </table>
-            </div>
+            elif sem["is_cff"]:
+                desc = "Fungsi ini terobfuskasi menggunakan <b>OLLVM Control Flow Flattening (CFF)</b>. Alur percabangan dan perulangan telah dipecah menjadi basic blocks independen yang dikendalikan oleh variabel dispatcher state machine."
+                wf_title = "Struktur Eksekusi Mesin Status (De-flattened):"
+                s_var = sem["state_candidates"][0] if sem["state_candidates"] else "dispatcher_var"
+                wf_steps = [
+                    f"<b>Status Awal (Inisialisasi Dispatcher):</b> Menginisialisasi variabel state <code>{s_var}</code> dengan nilai awal.",
+                    "<b>Perulangan Dispatch Status:</b> Evaluasi kondisi state di dalam switch/if-else tree untuk mengarahkan eksekusi ke basic block berikutnya.",
+                    "<b>Eksekusi Blok:</b> Menjalankan komputasi logika, verifikasi memory, atau transmisi payload di dalam basic block.",
+                    "<b>Transisi & Terminasi:</b> Memperbarui nilai state dispatcher hingga mencapai terminal return state."
+                ]
+                strat_hook = f"""
+                <li><b>Frida Interceptor:</b> Pasang hook pada <code>{ea_str}</code> untuk memonitor parameter input dan return value.</li>
+                <li><b>Bypass Status:</b> Jika fungsi memverifikasi integritas, ubah return value pada hook <code>onLeave</code> menjadi nilai sukses (misal: 0).</li>
+                """
+            elif sem["is_constructor"]:
+                desc = "Fungsi ini merupakan <b>Inisialisasi Objek / Konstruktor Struktur C++</b>. Berfungsi memasang tabel vtable method dan menginisialisasi properti objek."
+                wf_title = "Alur Konstruksi Struktur Objek (Object Initialization):"
+                vtable_str = next((g for g in sem['globals'] if 'off_' in g), "vtable")
+                wf_steps = [
+                    "<b>Persiapan Buffer:</b> Menyiapkan pointer objek target dari parameter input atau heap.",
+                    f"<b>Pengaitan VTable:</b> Mengaitkan virtual method table <code>{vtable_str}</code> ke offset 0x0 objek.",
+                    "<b>Inisialisasi Field:</b> Menulis nilai atribut properti default ke offset internal objek dan melakukan zeroing memori."
+                ]
+                strat_hook = f"""
+                <li><b>Hook Pointer Instansi:</b> Monitor argumen pertama (X0 / R0) yang merupakan <code>this</code> pointer dari objek yang sedang dibuat.</li>
+                """
+            elif sem["is_crypto"]:
+                desc = "Fungsi ini menjalankan <b>Transformasi Kriptografi / Hash / Operasi Bitwise</b>. Menggunakan permutasi bitwise intensif (XOR, shift) untuk enkripsi data atau kalkulasi checksum integritas."
+                wf_title = "Alur Transformasi Kriptografi:"
+                wf_steps = [
+                    "<b>Setup Masukan & Status:</b> Memuat konstanta hash atau seed awal ke register working state.",
+                    "<b>Permutasi Bitwise:</b> Rangkaian perulangan kalkulasi bitwise XOR, shift kiri/kanan, dan masking aritmatika.",
+                    "<b>Digest Akhir:</b> Menggabungkan hasil transformasi ke buffer output atau return value."
+                ]
+                strat_hook = f"""
+                <li><b>Dump Buffer Input/Output:</b> Pasang hook pada <code>onEnter</code> dan <code>onLeave</code> untuk mencatat buffer sebelum dan sesudah di-transformasi.</li>
+                """
+            else:
+                desc = f"Fungsi ini memiliki alur eksekusi <b>Subrutin Linear / Logika Standar</b> (Ukuran: {size} byte). Kode berjalan secara sekuensial tanpa pengaburan alur kontrol buatan."
+                wf_title = "Alur Eksekusi Fungsi Sekuensial (Linear Flow):"
+                calls_label = ", ".join(sem["calls"][:3]) if sem["calls"] else "operasi aritmatika internal"
+                wf_steps = [
+                    "<b>Prolog:</b> Menyiapkan stack frame dan mengalokasikan ruang untuk variabel lokal.",
+                    f"<b>Eksekusi Sub-rutin:</b> Memanggil sub-fungsi ({calls_label}) dan mengevaluasi percabangan logika.",
+                    "<b>Epilog & Kembalian:</b> Menyelesaikan komputasi dan mengembalikan hasil ke pemanggil."
+                ]
+                strat_hook = f"""
+                <li><b>Pelacakan Parameter:</b> Pasang Frida hook pada <code>{ea_str}</code> untuk membaca argumen register X0-X3 saat fungsi dipanggil.</li>
+                """
 
-            <div style="margin-top: 14px; padding: 8px 12px; background-color: #1a221f; border-left: 3px solid #10b981; border-radius: 0 4px 4px 0;">
-                <b style="color: #10b981;">🛡️ Strategi Reverse Engineering / Hooking:</b>
-                <ul style="margin: 4px 0 4px 18px; padding: 0; color: #abb2bf;">
-                    {strat_hook}
-                </ul>
+            html = f"""
+            <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; color: #dcdde4;">
+                <div style="border-bottom: 1px solid #333342; padding-bottom: 8px; margin-bottom: 12px;">
+                    <span style="font-size: 15px; font-weight: bold; color: #61afef;">⚡ Analisis Semantik: {fname}</span>
+                    <span style="font-size: 11px; color: #8c8f9e; margin-left: 10px;">Rentang: {func_info['start']} - {func_info['end']} ({size} byte)</span>
+                </div>
+                
+                <div style="margin-bottom: 10px;">
+                    <b>Klasifikasi:</b> 
+                    <span style="background-color: {sem['badge_bg']}; color: {sem['badge_color']}; padding: 3px 10px; border-radius: 4px; font-weight: bold;">{sem['category']}</span>
+                    {"<span style='background-color: #331f24; color: #e06c75; padding: 2px 8px; border-radius: 4px; margin-left: 6px;'>Terdeteksi JUMPOUT Tak Terselesaikan</span>" if sem['has_jumpout'] else ""}
+                </div>
+
+                <p style="color: #abb2bf;">
+                    <b>Fungsi Utama:</b> {desc}
+                </p>
+
+                <div style="background-color: #1f1f28; border-left: 3px solid #61afef; padding: 8px 12px; margin: 10px 0; border-radius: 0 4px 4px 0;">
+                    <b style="color: #61afef;">{wf_title}</b>
+                    <ol style="margin: 6px 0 6px 18px; padding: 0; color: #bcc0cc;">
+            """
+            for step in wf_steps:
+                html += f"<li>{step}</li>"
+
+            html += f"""
+                    </ol>
+                </div>
+
+                <div style="margin-top: 12px;">
+                    <b style="color: #98c379;">💡 Saran Ubah Nama Variabel untuk IDA Pro:</b>
+                    <table style="width: 100%; margin-top: 6px; border-collapse: collapse; font-size: 11px;">
+                        <tr style="color: #7f848e; text-align: left; border-bottom: 1px solid #2d2d3a;">
+                            <th style="padding: 4px;">Var Asli</th>
+                            <th style="padding: 4px;">Saran Nama Baru</th>
+                            <th style="padding: 4px;">Tujuan & Keterangan</th>
+                        </tr>
+            """
+            if rename_suggs:
+                for orig, sugg, desc_s in rename_suggs:
+                    html += f"""
+                        <tr style="border-bottom: 1px solid #252532;">
+                            <td style="padding: 5px; color: #e06c75; font-family: monospace;">{orig}</td>
+                            <td style="padding: 5px; color: #98c379; font-weight: bold; font-family: monospace;">{sugg}</td>
+                            <td style="padding: 5px; color: #abb2bf;">{desc_s}</td>
+                        </tr>
+                    """
+            else:
+                html += """
+                        <tr><td colspan="3" style="padding: 6px; color: #7f848e;">Tidak ada variabel obfuskasi agresif yang perlu diubah namanya secara otomatis.</td></tr>
+                """
+            html += f"""
+                    </table>
+                </div>
+
+                <div style="margin-top: 14px; padding: 8px 12px; background-color: #1a221f; border-left: 3px solid #10b981; border-radius: 0 4px 4px 0;">
+                    <b style="color: #10b981;">🛡️ Strategi Reverse Engineering / Hooking:</b>
+                    <ul style="margin: 4px 0 4px 18px; padding: 0; color: #abb2bf;">
+                        {strat_hook}
+                    </ul>
+                </div>
             </div>
-        </div>
-        """
-        return html
+            """
+            return html
+        else:
+            if sem["is_singleton"]:
+                vtable_str = next((g for g in sem['globals'] if 'off_' in g), "vtable")
+                g_ptr = next((g for g in sem['globals'] if 'qword_' in g), "qword_global")
+                desc = f"This function is a <b>Thread-Safe Singleton Factory / Object Provider</b>. It ensures that the primary instance object is allocated exactly once in heap memory (using <code>pthread_once</code>) and cached in global pointer <code>{g_ptr}</code> so that it can be accessed across all game/driver threads."
+                wf_title = "Singleton Initialization Flow (Thread-Safe Lazy Initialization):"
+                wf_steps = [
+                    f"<b>Fast-Path Cache Check:</b> Checks whether global pointer <code>{g_ptr}</code> was previously allocated. If non-null, returns the instance immediately without locking overhead.",
+                    f"<b>Thread-Safe Routine:</b> If NULL, calls <code>pthread_once</code> with routine <code>{sem['calls'][1] if len(sem['calls']) > 1 else 'init_func'}</code> to prevent race conditions during allocation.",
+                    "<b>Heap Allocation:</b> Allocates 264 bytes of heap memory via sub-allocator <code>sub_519AE0(264LL)</code>.",
+                    f"<b>Object Construction & VTable:</b> Invokes sub-constructor, binds virtual method table <code>{vtable_str}</code>, and initializes struct member offsets.",
+                    f"<b>Cache Storage & Return:</b> Stores ready object pointer into global variable <code>{g_ptr}</code> and returns it to caller."
+                ]
+                strat_hook = f"""
+                <li><b>Hook Return Value:</b> Attach Frida hook to function return of <code>{fname}</code> (<code>{ea_str}</code>) to obtain allocated object memory pointer.</li>
+                <li><b>Inspect Object VTable:</b> VTable pointer <code>{vtable_str}</code> can be inspected in memory to map virtual methods of this object.</li>
+                """
+            elif sem["is_cff"]:
+                desc = "This function is obfuscated using <b>OLLVM Control Flow Flattening (CFF)</b>. Branches and loops are broken into independent basic blocks controlled by a dispatcher state variable."
+                wf_title = "State Machine Execution Flow (De-flattened):"
+                s_var = sem["state_candidates"][0] if sem["state_candidates"] else "dispatcher_var"
+                wf_steps = [
+                    f"<b>State 0 (Dispatcher Initialization):</b> Initializes state variable <code>{s_var}</code> with entry value.",
+                    "<b>State Dispatch Loop:</b> Evaluates state conditions inside switch/if-else tree to dispatch to the next basic block.",
+                    "<b>Block Execution:</b> Executes core logic, memory verification, or payload transmission inside basic block.",
+                    "<b>State Transition & Exit:</b> Updates state dispatcher value until terminal return state is reached."
+                ]
+                strat_hook = f"""
+                <li><b>Frida Interceptor:</b> Attach hook at <code>{ea_str}</code> to monitor input arguments and return value.</li>
+                <li><b>Bypass State:</b> If function performs security verification, override return value in <code>onLeave</code> to success status (e.g., 0).</li>
+                """
+            elif sem["is_constructor"]:
+                desc = "This function is a <b>C++ Object Initializer / Struct Constructor</b>. It binds the virtual method table and initializes struct member properties."
+                wf_title = "Object Struct Construction Flow (Object Initialization):"
+                vtable_str = next((g for g in sem['globals'] if 'off_' in g), "vtable")
+                wf_steps = [
+                    "<b>Buffer Setup:</b> Sets up target object pointer from input parameters or heap.",
+                    f"<b>VTable Binding:</b> Binds virtual method table <code>{vtable_str}</code> to object offset 0x0.",
+                    "<b>Field Initialization:</b> Writes default member property values into internal struct offsets and clears padding memory."
+                ]
+                strat_hook = f"""
+                <li><b>Hook Instance Pointer:</b> Monitor first argument (X0 / R0) representing the <code>this</code> pointer of the created object.</li>
+                """
+            elif sem["is_crypto"]:
+                desc = "This function executes a <b>Cryptographic / Hash / Bitwise Transformation</b>. It uses intensive bitwise permutations (XOR, shift) for encryption or integrity checksum calculation."
+                wf_title = "Cryptographic Transformation Flow:"
+                wf_steps = [
+                    "<b>Input & State Setup:</b> Loads hash constants or initial seed into working state registers.",
+                    "<b>Bitwise Permutations:</b> Iterative loops of bitwise XOR, shifts, and arithmetic masking.",
+                    "<b>Final Digest:</b> Combines transformed state into output buffer or return value."
+                ]
+                strat_hook = f"""
+                <li><b>Dump Buffer Input/Output:</b> Attach hooks on <code>onEnter</code> and <code>onLeave</code> to capture buffers before and after transformation.</li>
+                """
+            else:
+                desc = f"This function exhibits a <b>Linear Subroutine / Standard Logic</b> flow (Size: {size} bytes). Execution proceeds sequentially without artificial control flow obfuscation."
+                wf_title = "Sequential Function Execution (Linear Flow):"
+                calls_label = ", ".join(sem["calls"][:3]) if sem["calls"] else "internal arithmetic operations"
+                wf_steps = [
+                    "<b>Prologue:</b> Sets up stack frame and allocates space for local variables.",
+                    f"<b>Subroutine Calls:</b> Calls helper routines ({calls_label}) and evaluates branching conditions.",
+                    "<b>Epilogue & Return:</b> Completes computation and returns result to caller."
+                ]
+                strat_hook = f"""
+                <li><b>Parameter Tracing:</b> Attach Frida hook at <code>{ea_str}</code> to read register arguments X0-X3 upon invocation.</li>
+                """
+
+            html = f"""
+            <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; color: #dcdde4;">
+                <div style="border-bottom: 1px solid #333342; padding-bottom: 8px; margin-bottom: 12px;">
+                    <span style="font-size: 15px; font-weight: bold; color: #61afef;">⚡ Semantic Analysis: {fname}</span>
+                    <span style="font-size: 11px; color: #8c8f9e; margin-left: 10px;">Range: {func_info['start']} - {func_info['end']} ({size} bytes)</span>
+                </div>
+                
+                <div style="margin-bottom: 10px;">
+                    <b>Classification:</b> 
+                    <span style="background-color: {sem['badge_bg']}; color: {sem['badge_color']}; padding: 3px 10px; border-radius: 4px; font-weight: bold;">{sem['category']}</span>
+                    {"<span style='background-color: #331f24; color: #e06c75; padding: 2px 8px; border-radius: 4px; margin-left: 6px;'>Unresolved JUMPOUT Detected</span>" if sem['has_jumpout'] else ""}
+                </div>
+
+                <p style="color: #abb2bf;">
+                    <b>Primary Purpose:</b> {desc}
+                </p>
+
+                <div style="background-color: #1f1f28; border-left: 3px solid #61afef; padding: 8px 12px; margin: 10px 0; border-radius: 0 4px 4px 0;">
+                    <b style="color: #61afef;">{wf_title}</b>
+                    <ol style="margin: 6px 0 6px 18px; padding: 0; color: #bcc0cc;">
+            """
+            for step in wf_steps:
+                html += f"<li>{step}</li>"
+
+            html += f"""
+                    </ol>
+                </div>
+
+                <div style="margin-top: 12px;">
+                    <b style="color: #98c379;">💡 Variable Rename Suggestions for IDA Pro:</b>
+                    <table style="width: 100%; margin-top: 6px; border-collapse: collapse; font-size: 11px;">
+                        <tr style="color: #7f848e; text-align: left; border-bottom: 1px solid #2d2d3a;">
+                            <th style="padding: 4px;">Original Var</th>
+                            <th style="padding: 4px;">Suggested Name</th>
+                            <th style="padding: 4px;">Purpose & Description</th>
+                        </tr>
+            """
+            if rename_suggs:
+                for orig, sugg, desc_s in rename_suggs:
+                    html += f"""
+                        <tr style="border-bottom: 1px solid #252532;">
+                            <td style="padding: 5px; color: #e06c75; font-family: monospace;">{orig}</td>
+                            <td style="padding: 5px; color: #98c379; font-weight: bold; font-family: monospace;">{sugg}</td>
+                            <td style="padding: 5px; color: #abb2bf;">{desc_s}</td>
+                        </tr>
+                    """
+            else:
+                html += """
+                        <tr><td colspan="3" style="padding: 6px; color: #7f848e;">No aggressive obfuscated variables requiring automatic renaming.</td></tr>
+                """
+            html += f"""
+                    </table>
+                </div>
+
+                <div style="margin-top: 14px; padding: 8px 12px; background-color: #1a221f; border-left: 3px solid #10b981; border-radius: 0 4px 4px 0;">
+                    <b style="color: #10b981;">🛡️ Reverse Engineering / Hooking Strategy:</b>
+                    <ul style="margin: 4px 0 4px 18px; padding: 0; color: #abb2bf;">
+                        {strat_hook}
+                    </ul>
+                </div>
+            </div>
+            """
+            return html
 
     @classmethod
     def apply_renames_to_ida(cls):
+        lang = cls.get_language()
         try:
             import idaapi
             import ida_hexrays
 
             func_info = cls.get_current_function_details()
             if not func_info:
-                return False, "No active function selected."
+                return False, "No active function selected." if lang != "id" else "Tidak ada fungsi aktif yang dipilih."
 
             ea = int(func_info["start"], 16)
             renamed_count = 0
@@ -3431,7 +3802,8 @@ class McpDashboardState:
                 cls.tab_instance.refresh_cursor_info(ea)
 
             cls.log_event("agent_success", f"Applied {renamed_count} variable renames & comment to {func_info['name']}")
-            return True, f"Berhasil merename {renamed_count} variabel di tampilan Hex-Rays IDA!"
+            msg = f"Berhasil mengubah nama {renamed_count} variabel di tampilan Hex-Rays IDA!" if lang == "id" else f"Successfully renamed {renamed_count} variables in Hex-Rays IDA view!"
+            return True, msg
         except Exception as e:
             return False, str(e)
 
@@ -3444,6 +3816,7 @@ class McpDashboardState:
         model = direct_cfg.get("model", "").strip()
         base_url = direct_cfg.get("base_url", "https://generativelanguage.googleapis.com/v1beta").rstrip("/")
         ollama_url = direct_cfg.get("ollama_url", "http://localhost:11434/v1").rstrip("/")
+        lang = cls.get_language()
 
         if not model:
             if provider.lower() == "gemini":
@@ -3451,19 +3824,28 @@ class McpDashboardState:
             else:
                 model = "gpt-4o"
 
-        system_instruction = (
-            "You are an elite Reverse Engineering AI Copilot assisting in IDA Pro. "
-            f"Active Function: {func_info.get('name')} (Address: {func_info.get('start')}). "
-            "Analyze the assembly/pseudocode, explain control flow flattening (CFF), identify cryptographic routines, "
-            "recommend Frida hooks or patches, and suggest semantic variable renames in concise, technical Indonesian or English."
-        )
+        if lang == "id":
+            system_instruction = (
+                "Anda adalah AI Asisten Reverse Engineering tingkat lanjut di IDA Pro. "
+                f"Fungsi Aktif: {func_info.get('name')} (Alamat: {func_info.get('start')}). "
+                "Analisis assembly/pseudocode, jelaskan deobfuskasi control flow flattening (CFF), identifikasi fungsi kriptografi, "
+                "rekomendasikan script hook Frida atau patch biner, dan berikan saran nama variabel dalam Bahasa Indonesia teknis yang akurat dan padat."
+            )
+        else:
+            system_instruction = (
+                "You are an elite Reverse Engineering AI Copilot assisting in IDA Pro. "
+                f"Active Function: {func_info.get('name')} (Address: {func_info.get('start')}). "
+                "Analyze the assembly/pseudocode, explain control flow flattening (CFF), identify cryptographic routines, "
+                "recommend Frida hooks or binary patches, and suggest semantic variable renames in concise, technical English."
+            )
 
-        user_content = f"{system_instruction}\n\nPseudocode:\n{func_info.get('pseudocode', '')[:8000]}\n\nUser Question: {query}"
+        user_content = f"{system_instruction}\\n\\nPseudocode:\\n{func_info.get('pseudocode', '')[:8000]}\\n\\nUser Question: {query}"
 
         try:
             if provider.lower() == "gemini":
                 if not api_key:
-                    return None, "Gemini API key is empty. Configure it in the 'MCP Server & Agents' tab."
+                    err_msg = "Kunci API Gemini kosong. Konfigurasikan pada tab 'Server MCP & Agen'." if lang == "id" else "Gemini API key is empty. Configure it in the 'MCP Server & Agents' tab."
+                    return None, err_msg
                 url = f"{base_url}/models/{model}:generateContent?key={api_key}"
                 payload = {
                     "contents": [{"parts": [{"text": user_content}]}],
@@ -3483,7 +3865,7 @@ class McpDashboardState:
                     "model": model,
                     "messages": [
                         {"role": "system", "content": system_instruction},
-                        {"role": "user", "content": f"Pseudocode:\n{func_info.get('pseudocode','')[:8000]}\n\n{query}"}
+                        {"role": "user", "content": f"Pseudocode:\\n{func_info.get('pseudocode','')[:8000]}\\n\\n{query}"}
                     ],
                     "max_tokens": 2048,
                     "temperature": 0.2
@@ -3502,9 +3884,10 @@ class McpDashboardState:
 
     @classmethod
     def answer_user_query(cls, query):
+        lang = cls.get_language()
         func_info = cls.get_current_function_details()
         if not func_info:
-            return "Tidak ada fungsi yang sedang aktif di IDA View."
+            return "Tidak ada fungsi yang sedang aktif di IDA View." if lang == "id" else "No active function in IDA View."
 
         fname = func_info.get("name", "Unknown")
         code = func_info.get("pseudocode", "")
@@ -3517,7 +3900,6 @@ class McpDashboardState:
         agent_info = cls.get_active_agent_info()
         agent_name = agent_info.get("name", active_key)
 
-        # 1. Check if user configured Direct AI API
         if active_key == "Direct_API":
             ok, direct_res = cls.query_direct_llm(query, func_info)
             if ok:
@@ -3525,21 +3907,22 @@ class McpDashboardState:
                 return f"""
                 <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5; color: #dcdde4;">
                     <div style="border-bottom: 1px solid #333342; padding-bottom: 4px; margin-bottom: 8px;">
-                        <b style="color: #61afef;">🤖 Response from {agent_info.get('provider')} ({agent_info.get('model')}):</b>
+                        <b style="color: #61afef;">Response from {agent_info.get('provider')} ({agent_info.get('model')}):</b>
                     </div>
                     <div style="white-space: pre-wrap; font-size: 12px;">{direct_res.replace('<', '&lt;').replace('>', '&gt;')}</div>
                 </div>
                 """
             cls.log_event("agent_error", direct_res or "Direct AI request failed")
+            err_head = f"Gagal Menghubungi Custom AI Agent ({agent_info.get('provider', 'Direct API')} - {agent_info.get('model', 'Model')}):" if lang == "id" else f"Failed to Contact Custom AI Agent ({agent_info.get('provider', 'Direct API')} - {agent_info.get('model', 'Model')}):"
+            err_sub = "Silakan periksa URL Basis, Kunci API, atau pilih Model ID lain pada tab Server MCP & Agen." if lang == "id" else "Please check Base URL, API Key, or select another Model ID in the MCP Server & Agents tab."
             return f"""
             <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5; color: #EF4444; background-color: #2D1515; border: 1px solid #DC2626; border-radius: 6px; padding: 10px;">
-                <b>❌ Gagal Menghubungi Custom AI Agent ({agent_info.get('provider', 'Direct API')} - {agent_info.get('model', 'Model')}):</b><br/>
+                <b>❌ {err_head}</b><br/>
                 <div style="margin-top: 6px; color: #FCA5A5; font-size: 12px;">{direct_res}</div>
-                <div style="margin-top: 8px; font-size: 11px; color: #94A3B8;">Silakan periksa Base URL, API Key, atau pilih Model ID lain pada tab MCP Server & Agents.</div>
+                <div style="margin-top: 8px; font-size: 11px; color: #94A3B8;">{err_sub}</div>
             </div>
             """
 
-        # 2. Local Semantic Reversing Engine (Instant, Offline, Tailored)
         sem = cls.inspect_function_semantics(func_info)
 
         callers = []
@@ -3554,14 +3937,14 @@ class McpDashboardState:
         except Exception:
             pass
 
-        # Handle Query Intent Dynamically
         if any(w in q_lower for w in ["bypass", "hook", "frida", "patch", "interceptor"]):
-            if sem["is_singleton"]:
-                reply = f"""
-                <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
-                    <b style="color: #61afef;">🎯 Strategi Hooking Frida untuk Singleton <code>{fname}</code> (Prepared for {agent_name}):</b><br/>
-                    Karena fungsi ini mengembalikan pointer instance objek tunggal, kita dapat meng-intercept return value untuk mengakses instance memori:<br/>
-                    <pre style="background-color: #14141c; padding: 10px; border-radius: 6px; color: #98c379; font-family: monospace; font-size: 11px; margin: 6px 0;">
+            if lang == "id":
+                if sem["is_singleton"]:
+                    return f"""
+                    <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
+                        <b style="color: #61afef;">🎯 Strategi Hooking Frida untuk Singleton <code>{fname}</code> (Disiapkan untuk {agent_name}):</b><br/>
+                        Karena fungsi ini mengembalikan pointer instance objek tunggal, kita dapat meng-intercept return value untuk mengakses instance memori:<br/>
+                        <pre style="background-color: #14141c; padding: 10px; border-radius: 6px; color: #98c379; font-family: monospace; font-size: 11px; margin: 6px 0;">
 var targetAddr = Module.findExportByName("libanogs.so", "{fname}") || ptr("{ea_str}");
 Interceptor.attach(targetAddr, {{
     onEnter: function(args) {{
@@ -3574,37 +3957,98 @@ Interceptor.attach(targetAddr, {{
         }}
     }}
 }});
-                    </pre>
-                    <b style="color: #e5c07b;">📌 Catatan Reversing:</b> Objek ini memiliki vtable di <code>{next((g for g in sem['globals'] if 'off_' in g), 'vtable')}</code>. Anda dapat meng-hook fungsi-fungsi virtual di dalam vtable tersebut.
-                </div>
-                """
-            elif sem["is_cff"] or sem["is_ioctl"]:
-                reply = f"""
-                <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
-                    <b style="color: #61afef;">🛡️ Strategi Bypass & Hooking untuk <code>{fname}</code>:</b><br/>
-                    <ol style="margin: 4px 0 6px 18px; padding: 0;">
-                        <li><b>Frida Interceptor Hook:</b>
-                            <pre style="background-color: #14141c; padding: 8px; border-radius: 4px; color: #98c379; font-family: monospace; font-size: 11px; margin: 4px 0;">
+                        </pre>
+                        <b style="color: #e5c07b;">📌 Catatan Reversing:</b> Objek ini memiliki vtable di <code>{next((g for g in sem['globals'] if 'off_' in g), 'vtable')}</code>. Anda dapat meng-hook fungsi-fungsi virtual di dalam vtable tersebut.
+                    </div>
+                    """
+                elif sem["is_cff"] or sem["is_ioctl"]:
+                    return f"""
+                    <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
+                        <b style="color: #61afef;">🛡️ Strategi Bypass & Hooking untuk <code>{fname}</code>:</b><br/>
+                        <ol style="margin: 4px 0 6px 18px; padding: 0;">
+                            <li><b>Frida Interceptor Hook:</b>
+                                <pre style="background-color: #14141c; padding: 8px; border-radius: 4px; color: #98c379; font-family: monospace; font-size: 11px; margin: 4px 0;">
 Interceptor.attach(Module.findExportByName("libanogs.so", "{fname}") || ptr("{ea_str}"), {{
     onEnter: function(args) {{
         console.log("[*] {fname} security check entered");
     }},
     onLeave: function(retval) {{
         console.log("[*] {fname} Original return: " + retval);
-        retval.replace(ptr(0)); // Force return 0 (Success/Bypass)
+        retval.replace(ptr(0));
     }}
 }});
-                            </pre>
-                        </li>
-                        <li><b>Binary Patch (ARM64):</b> Ganti instruksi pertama di <code>{ea_str}</code> menjadi <code>MOV W0, #0; RET</code> (Hex bytes: <code>00 00 80 52 C0 03 5F D6</code>).</li>
-                    </ol>
-                </div>
-                """
+                                </pre>
+                            </li>
+                            <li><b>Patch Biner (ARM64):</b> Ganti instruksi pertama di <code>{ea_str}</code> menjadi <code>MOV W0, #0; RET</code> (Hex bytes: <code>00 00 80 52 C0 03 5F D6</code>).</li>
+                        </ol>
+                    </div>
+                    """
+                else:
+                    return f"""
+                    <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
+                        <b style="color: #61afef;">🔧 Skrip Frida untuk <code>{fname}</code>:</b><br/>
+                        <pre style="background-color: #14141c; padding: 8px; border-radius: 4px; color: #98c379; font-family: monospace; font-size: 11px; margin: 4px 0;">
+Interceptor.attach(ptr("{ea_str}"), {{
+    onEnter: function(args) {{
+        console.log("[*] {fname} dipanggil arg0=" + args[0] + ", arg1=" + args[1]);
+    }},
+    onLeave: function(retval) {{
+        console.log("[*] {fname} return: " + retval);
+    }}
+}});
+                        </pre>
+                    </div>
+                    """
             else:
-                reply = f"""
-                <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
-                    <b style="color: #61afef;">🔧 Frida Script untuk <code>{fname}</code>:</b><br/>
-                    <pre style="background-color: #14141c; padding: 8px; border-radius: 4px; color: #98c379; font-family: monospace; font-size: 11px; margin: 4px 0;">
+                if sem["is_singleton"]:
+                    return f"""
+                    <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
+                        <b style="color: #61afef;">🎯 Frida Hooking Strategy for Singleton <code>{fname}</code> (Prepared for {agent_name}):</b><br/>
+                        Since this routine returns a singleton instance object pointer, intercept the return value to explore instance memory:<br/>
+                        <pre style="background-color: #14141c; padding: 10px; border-radius: 6px; color: #98c379; font-family: monospace; font-size: 11px; margin: 6px 0;">
+var targetAddr = Module.findExportByName("libanogs.so", "{fname}") || ptr("{ea_str}");
+Interceptor.attach(targetAddr, {{
+    onEnter: function(args) {{
+        console.log("[+] {fname} called");
+    }},
+    onLeave: function(retval) {{
+        console.log("[+] {fname} Return Instance: " + retval);
+        if (!retval.isNull()) {{
+            console.log(hexdump(retval, {{ length: 64, header: true }}));
+        }}
+    }}
+}});
+                        </pre>
+                        <b style="color: #e5c07b;">📌 Reversing Note:</b> Object binds vtable at <code>{next((g for g in sem['globals'] if 'off_' in g), 'vtable')}</code>. You can hook virtual methods within that table.
+                    </div>
+                    """
+                elif sem["is_cff"] or sem["is_ioctl"]:
+                    return f"""
+                    <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
+                        <b style="color: #61afef;">🛡️ Bypass & Hooking Strategy for <code>{fname}</code>:</b><br/>
+                        <ol style="margin: 4px 0 6px 18px; padding: 0;">
+                            <li><b>Frida Interceptor Hook:</b>
+                                <pre style="background-color: #14141c; padding: 8px; border-radius: 4px; color: #98c379; font-family: monospace; font-size: 11px; margin: 4px 0;">
+Interceptor.attach(Module.findExportByName("libanogs.so", "{fname}") || ptr("{ea_str}"), {{
+    onEnter: function(args) {{
+        console.log("[*] {fname} security check entered");
+    }},
+    onLeave: function(retval) {{
+        console.log("[*] {fname} Original return: " + retval);
+        retval.replace(ptr(0));
+    }}
+}});
+                                </pre>
+                            </li>
+                            <li><b>Binary Patch (ARM64):</b> Replace the first instruction at <code>{ea_str}</code> with <code>MOV W0, #0; RET</code> (Hex bytes: <code>00 00 80 52 C0 03 5F D6</code>).</li>
+                        </ol>
+                    </div>
+                    """
+                else:
+                    return f"""
+                    <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
+                        <b style="color: #61afef;">🔧 Frida Script for <code>{fname}</code>:</b><br/>
+                        <pre style="background-color: #14141c; padding: 8px; border-radius: 4px; color: #98c379; font-family: monospace; font-size: 11px; margin: 4px 0;">
 Interceptor.attach(ptr("{ea_str}"), {{
     onEnter: function(args) {{
         console.log("[*] {fname} called with arg0=" + args[0] + ", arg1=" + args[1]);
@@ -3613,317 +4057,217 @@ Interceptor.attach(ptr("{ea_str}"), {{
         console.log("[*] {fname} returned: " + retval);
     }}
 }});
-                    </pre>
-                </div>
-                """
-        elif any(w in q_lower for w in ["xref", "caller", "siapa panggil", "dipanggil"]):
-            caller_items = "".join([f"<li><code>{c['name']}</code> pada alamat <code>{c['address']}</code></li>" for c in callers[:12]])
-            reply = f"""
-            <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
-                <b style="color: #61afef;">🔗 Analisis Cross-References (Callers) untuk <code>{fname}</code>:</b><br/>
-                Fungsi ini dipanggil oleh <b>{len(callers)} lokasi</b> di dalam binary:<br/>
-                <ul style="margin: 6px 0 6px 18px; padding: 0; color: #abb2bf;">
-                    {caller_items if caller_items else "<li>Tidak ditemukan pemanggil langsung (kemungkinan fungsi root, export, atau dipanggil via function pointer).</li>"}
-                </ul>
-            </div>
-            """
-        else:
-            walkthrough = []
-            if sem["is_singleton"]:
-                g_ptr = next((g for g in sem['globals'] if 'qword_' in g), "qword_5753A8")
-                vtable_str = next((g for g in sem['globals'] if 'off_' in g), "off_5251B0")
-                walkthrough.append(f"<b>Pengecekan Pointer Global (Line 7-8):</b> Membaca <code>{g_ptr}</code>. Jika sudah bernilai non-NULL, fungsi langsung melakukan fast return mengembalikan objek yang sudah dibuat sebelumnya.")
-                walkthrough.append(f"<b>Multithreading Lock (Line 10-12):</b> Menggunakan <code>pthread_once(&dword_5753B0, sub_213A54)</code>. Pola ini memastikan inisialisasi berjalan thread-safe dan hanya dieksekusi tepat satu kali.")
-                walkthrough.append("<b>Alokasi Heap Memori (Line 14):</b> Memanggil allocator <code>sub_519AE0(264LL)</code> untuk memesan buffer memori sebesar 264 byte di heap.")
-                walkthrough.append(f"<b>Inisialisasi Objek & VTable (Line 15-30):</b> Menjalankan konstruktor <code>sub_4DED4C</code>, mengaitkan virtual method table <code>{vtable_str}</code>, mengisi properti field internal, dan melakukan zeroing memori sisa.")
-                walkthrough.append(f"<b>Simpan ke Global Cache (Line 31-32):</b> Menyimpan pointer objek yang telah siap ke variabel <code>{g_ptr}</code> dan mengembalikannya ke caller.")
-            elif sem["is_cff"]:
-                s_var = sem["state_candidates"][0] if sem["state_candidates"] else "state_dispatcher"
-                walkthrough.append(f"<b>State Variable Initialization:</b> State machine dikendalikan oleh variabel <code>{s_var}</code>.")
-                walkthrough.append("<b>Dispatcher Branch Tree:</b> Struktur switch/if bertingkat digunakan untuk menentukan basic block mana yang dieksekusi berikutnya.")
-                walkthrough.append("<b>Flattened Basic Blocks:</b> Operasi logika program yang sebenarnya disebar di dalam case state acak untuk menyulitkan analisis alur kontrol statis.")
-                walkthrough.append("<b>State Update:</b> Setiap basic block mengkalkulasi nilai state berikutnya hingga mencapai exit state.")
-            elif sem["is_crypto"]:
-                walkthrough.append("<b>Inisialisasi Register:</b> Memuat nilai konstanta atau seed buffer input.")
-                walkthrough.append("<b>Transformasi Aritmatika & Bitwise:</b> Rangkaian instruksi XOR, shift, dan mask memproses byte input.")
-                walkthrough.append("<b>Final Return:</b> Menghasilkan nilai hash atau buffer terenkripsi.")
-            else:
-                walkthrough.append(f"<b>Eksekusi Linier:</b> Menjalankan operasi sekuensial dan memanggil sub-fungsi: <code>{', '.join(sem['calls'][:4]) if sem['calls'] else 'instruksi native'}</code>.")
-                walkthrough.append(f"<b>Akses Memori:</b> Membaca/menulis data lokal stack dan global.")
-                walkthrough.append("<b>Return Value:</b> Mengembalikan nilai kalkulasi atau status eksekusi ke pemanggil.")
+                        </pre>
+                    </div>
+                    """
 
-            walkthrough_html = "".join([f"<li style='margin-bottom: 4px;'>{step}</li>" for step in walkthrough])
-
-            reply = f"""
-            <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; color: #dcdde4;">
-                <div style="border-bottom: 1px solid #333342; padding-bottom: 6px; margin-bottom: 10px;">
-                    <b style="font-size: 14px; color: #61afef;">📖 Penjelasan Komprehensif: <code>{fname}</code></b>
-                    <span style="font-size: 11px; color: #8c8f9e; margin-left: 8px;">(Alamat: {ea_str}, Ukuran: {size} bytes | Tailored for: {agent_name})</span>
-                </div>
-
-                <p style="margin-bottom: 8px;">
-                    <b>1. Klasifikasi & Peran Teknis:</b><br/>
-                    Fungsi ini teridentifikasi sebagai <span style="background-color: {sem['badge_bg']}; color: {sem['badge_color']}; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{sem['category']}</span>.
-                </p>
-
-                <div style="background-color: #1a1a24; border-left: 3px solid #61afef; padding: 8px 12px; margin: 8px 0; border-radius: 0 4px 4px 0;">
-                    <b style="color: #61afef;">2. Bedah Logika Pseudocode:</b>
-                    <ol style="margin: 6px 0 4px 18px; padding: 0; color: #bcc0cc; font-size: 12px;">
-                        {walkthrough_html}
-                    </ol>
-                </div>
-
-                <div style="background-color: #17221d; border-left: 3px solid #10b981; padding: 8px 12px; margin-top: 8px; border-radius: 0 4px 4px 0; font-size: 12px;">
-                    <b style="color: #10b981;">3. Rekomendasi Lanjutan untuk {agent_name}:</b>
-                    <ul style="margin: 4px 0 2px 18px; padding: 0; color: #abb2bf;">
-                        <li>Klik <b>'Send to {agent_name}'</b> di toolbar untuk mengekspor konteks lengkap ke clipboard.</li>
-                        <li>Gunakan tombol <b>'Apply Renames to IDA'</b> untuk langsung merapikan nama variabel di Hex-Rays.</li>
+        elif any(w in q_lower for w in ["xref", "caller", "callers", "who calls", "siapa panggil", "dipanggil"]):
+            if lang == "id":
+                caller_items = "".join([f"<li><code>{c['name']}</code> pada alamat <code>{c['address']}</code></li>" for c in callers[:12]])
+                return f"""
+                <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
+                    <b style="color: #61afef;">🔗 Analisis Referensi Silang (Pemanggil) untuk <code>{fname}</code>:</b><br/>
+                    Fungsi ini dipanggil oleh <b>{len(callers)} lokasi</b> di dalam biner:<br/>
+                    <ul style="margin: 6px 0 6px 18px; padding: 0; color: #abb2bf;">
+                        {caller_items if caller_items else "<li>Tidak ditemukan pemanggil langsung (kemungkinan fungsi root, ekspor, atau dipanggil via pointer fungsi).</li>"}
                     </ul>
                 </div>
-            </div>
-            """
+                """
+            else:
+                caller_items = "".join([f"<li><code>{c['name']}</code> at address <code>{c['address']}</code></li>" for c in callers[:12]])
+                return f"""
+                <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
+                    <b style="color: #61afef;">🔗 Cross-Reference Analysis (Callers) for <code>{fname}</code>:</b><br/>
+                    This function is referenced by <b>{len(callers)} locations</b> in the binary:<br/>
+                    <ul style="margin: 6px 0 6px 18px; padding: 0; color: #abb2bf;">
+                        {caller_items if caller_items else "<li>No direct xref callers found (likely a root routine, export, or dynamically dispatched via function pointer).</li>"}
+                    </ul>
+                </div>
+                """
+        else:
+            if lang == "id":
+                return f"""
+                <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
+                    <b style="color: #61afef;">Analisis Fungsi {fname}:</b><br/>
+                    Fungsi berada pada rentang <code>{ea_str}</code> berukuran {size} byte dengan klasifikasi <b>{sem['category']}</b>.<br/>
+                    Kueri Anda <i>"{query}"</i> telah dicatat. Gunakan tombol <b>'Deobfuskasi && Jelaskan'</b> untuk ringkasan alur logika lengkap atau pilih Direct AI API untuk penalaran LLM mendalam.
+                </div>
+                """
+            else:
+                return f"""
+                <div style="font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.5;">
+                    <b style="color: #61afef;">Analysis for {fname}:</b><br/>
+                    Function is located at <code>{ea_str}</code> (size: {size} bytes), classified as <b>{sem['category']}</b>.<br/>
+                    Your query <i>"{query}"</i> is recorded. Use the <b>'Deobfuscate && Explain'</b> button for full execution logic or select Direct AI API for real-time LLM reasoning.
+                </div>
+                """
 
-        # Log chat
-        chat_entry = {
-            "time": datetime.datetime.now().strftime("%H:%M:%S"),
-            "agent": agent_name,
-            "function": fname,
-            "query": query,
-            "reply_length": len(reply)
-        }
-        try:
-            with open(cls.chat_file_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(chat_entry) + "\n")
-        except Exception:
-            pass
-
-        return reply
-
-# Backward compatibility alias
-ReaBridgeState = McpDashboardState
-
-
-# ==============================================================================
-# UI Tab: MCP Dashboard & Multi-Agent Workbench
-# ==============================================================================
-import ida_kernwin
+    @classmethod
+    def on_ea_changed(cls, ea):
+        if ea == cls.last_cursor_ea:
+            return
+        cls.last_cursor_ea = ea
+        if cls.tab_instance and hasattr(cls.tab_instance, "refresh_cursor_info"):
+            cls.tab_instance.refresh_cursor_info(ea)
 
 DASHBOARD_QSS = """
-QWidget {
-    background-color: #0B0D12;
-    color: #E8EDF5;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    font-size: 13px;
-    selection-background-color: #2A2744;
-    selection-color: #FFFFFF;
-}
-
 QFrame#cardPanel {
     background-color: #11151D;
     border: 1px solid #283142;
     border-radius: 8px;
-    padding: 10px;
 }
 
 QTabWidget::pane {
     border: 1px solid #283142;
-    background-color: #11151D;
-    border-radius: 6px;
+    background-color: #0B0E14;
+    border-radius: 8px;
     top: -1px;
 }
 
 QTabBar::tab {
-    background-color: #0B0D12;
+    background-color: #171D28;
     color: #94A3B8;
-    border: 1px solid #283142;
-    border-bottom: none;
-    padding: 9px 18px;
+    font-weight: 600;
+    font-size: 11px;
+    padding: 7px 16px;
     margin-right: 4px;
     border-top-left-radius: 6px;
     border-top-right-radius: 6px;
-    font-weight: 600;
-    font-size: 12px;
-}
-
-QTabBar::tab:selected {
-    background-color: #11151D;
-    color: #E8EDF5;
     border: 1px solid #283142;
-    border-top: 2px solid #8B5CF6;
     border-bottom: none;
 }
 
-QTabBar::tab:hover:!selected {
-    background-color: #171D28;
-    color: #E8EDF5;
-    border-color: #38455B;
+QTabBar::tab:selected {
+    background-color: #0B0E14;
+    color: #38BDF8;
+    border-top: 2px solid #38BDF8;
+    border-bottom: 1px solid #0B0E14;
 }
 
-QTabBar::tab:focus {
-    outline: none;
+QTabBar::tab:hover:!selected {
+    background-color: #1E293B;
+    color: #E2E8F0;
 }
 
 QPushButton {
-    background-color: #171D28;
-    color: #E8EDF5;
-    border: 1px solid #283142;
-    border-radius: 6px;
+    background-color: #1E293B;
+    color: #E2E8F0;
+    border: 1px solid #334155;
+    border-radius: 5px;
     padding: 6px 14px;
-    font-weight: 500;
-    font-size: 12px;
-    min-height: 18px;
+    font-weight: 600;
+    font-size: 11px;
 }
 
 QPushButton:hover {
-    background-color: #1E2638;
-    border-color: #8B5CF6;
-    color: #FFFFFF;
+    background-color: #334155;
+    border-color: #475569;
 }
 
 QPushButton:pressed {
-    background-color: #0E131C;
-    border-color: #7C3AED;
-}
-
-QPushButton:disabled {
-    background-color: #11151D;
-    color: #475569;
-    border-color: #1E293B;
+    background-color: #0F172A;
 }
 
 QPushButton#primaryAction {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #7C3AED, stop:1 #8B5CF6);
-    border: 1px solid #A78BFA;
+    background-color: #6366F1;
     color: #FFFFFF;
-    font-weight: 600;
+    border: 1px solid #4F46E5;
 }
 
 QPushButton#primaryAction:hover {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #6D28D9, stop:1 #7C3AED);
-    border-color: #C4B5FD;
+    background-color: #4F46E5;
+}
+
+QPushButton#accentAction {
+    background-color: #0284C7;
+    color: #FFFFFF;
+    border: 1px solid #0369A1;
+}
+
+QPushButton#accentAction:hover {
+    background-color: #0369A1;
 }
 
 QPushButton#successAction {
-    background-color: #065F46;
-    border: 1px solid #34D399;
+    background-color: #059669;
     color: #FFFFFF;
-    font-weight: 600;
+    border: 1px solid #047857;
 }
 
 QPushButton#successAction:hover {
     background-color: #047857;
-    border-color: #6EE7B7;
 }
 
-QPushButton#accentAction {
-    background-color: #0C4A6E;
+QLineEdit, QTextEdit, QComboBox {
+    background-color: #171D28;
+    border: 1px solid #283142;
+    border-radius: 5px;
+    padding: 5px 8px;
+    color: #E8EDF5;
+    font-size: 12px;
+}
+
+QLineEdit:focus, QTextEdit:focus, QComboBox:focus {
     border: 1px solid #38BDF8;
-    color: #FFFFFF;
-    font-weight: 600;
-}
-
-QPushButton#accentAction:hover {
-    background-color: #075985;
-    border-color: #7DD3FC;
-}
-
-QLineEdit, QComboBox {
-    background-color: #171D28;
-    border: 1px solid #283142;
-    border-radius: 6px;
-    padding: 6px 10px;
-    color: #E8EDF5;
-    font-size: 12px;
-}
-
-QLineEdit:focus, QComboBox:focus {
-    border: 1px solid #8B5CF6;
-    background-color: #1B2230;
-}
-
-QComboBox::drop-down {
-    subcontrol-origin: padding;
-    subcontrol-position: top right;
-    width: 24px;
-    border-left: 1px solid #283142;
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-}
-
-QComboBox QAbstractItemView {
-    background-color: #11151D;
-    border: 1px solid #283142;
-    border-radius: 6px;
-    padding: 4px;
-    selection-background-color: #2A2744;
-    selection-color: #38BDF8;
-    color: #E8EDF5;
-    outline: none;
-}
-
-QTextEdit, QListWidget {
-    background-color: #171D28;
-    border: 1px solid #283142;
-    border-radius: 6px;
-    font-family: 'Cascadia Code', 'Consolas', monospace;
-    font-size: 12px;
-    color: #E8EDF5;
-    padding: 8px;
-}
-
-QTextEdit:focus, QListWidget:focus {
-    border: 1px solid #8B5CF6;
 }
 
 QTableWidget {
     background-color: #11151D;
-    alternate-background-color: #141A24;
+    alternate-background-color: #171D28;
     border: 1px solid #283142;
     border-radius: 6px;
-    gridline-color: #1E2638;
+    gridline-color: #1E293B;
+    font-size: 11px;
     color: #E8EDF5;
-    outline: none;
-}
-
-QTableWidget::item {
-    padding: 6px 10px;
-    border-bottom: 1px solid #171D28;
 }
 
 QTableWidget::item:selected {
-    background-color: #2A2744;
-    color: #FFFFFF;
-}
-
-QTableWidget::item:hover:!selected {
-    background-color: #1B2230;
+    background-color: #1E293B;
+    color: #38BDF8;
 }
 
 QHeaderView::section {
     background-color: #171D28;
     color: #94A3B8;
-    padding: 8px 10px;
-    border: none;
-    border-bottom: 2px solid #283142;
-    border-right: 1px solid #1E2638;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 6px;
+    border: 1px solid #283142;
+}
+
+QListWidget {
+    background-color: #171D28;
+    border: 1px solid #283142;
+    border-radius: 6px;
+    color: #E8EDF5;
+    font-family: 'Cascadia Code', 'Consolas', monospace;
     font-size: 11px;
 }
 
-QHeaderView::section:horizontal {
-    text-transform: uppercase;
+QListWidget::item {
+    padding: 5px 8px;
+    border-bottom: 1px solid #1F2737;
+}
+
+QListWidget::item:hover {
+    background-color: #1E293B;
+    color: #38BDF8;
+}
+
+QListWidget::item:selected {
+    background-color: #283142;
+    color: #38BDF8;
 }
 
 QScrollBar:vertical {
     background-color: #11151D;
     width: 8px;
     margin: 0px;
-    border-radius: 4px;
 }
 
 QScrollBar::handle:vertical {
-    background-color: #283142;
-    min-height: 24px;
+    background-color: #334155;
+    min-height: 20px;
     border-radius: 4px;
 }
 
@@ -3940,12 +4284,11 @@ QScrollBar:horizontal {
     background-color: #11151D;
     height: 8px;
     margin: 0px;
-    border-radius: 4px;
 }
 
 QScrollBar::handle:horizontal {
-    background-color: #283142;
-    min-width: 24px;
+    background-color: #334155;
+    min-width: 20px;
     border-radius: 4px;
 }
 
@@ -3972,53 +4315,94 @@ class McpDashboardTab(ida_kernwin.PluginForm):
     def __init__(self):
         super().__init__()
         self.parent = None
+        self.title_lbl = None
         self.bin_lbl = None
+        self.lang_combo = None
         self.agent_pill = None
         self.status_pill = None
-        self.func_title_lbl = None
-        self.func_meta_lbl = None
-        self.func_combo = None
-        self.cff_badge = None
-        self.ai_output_view = None
-        self.prompt_input = None
-        self.ask_btn = None
-        self.btn_export = None
-        self.code_viewer = None
-        self.log_text = None
-        self.callers_list = None
-        self.callees_list = None
-        self.tools_table = None
-        self.tool_search = None
-        self.category_combo = None
-        self.tools_count_lbl = None
-        self.agent_combo = None
-        self.agent_desc_box = None
         self.refresh_btn = None
+        self.tabs = None
+
+        self.s_title = None
+        self.copy_url_btn = None
+        self.test_conn_btn = None
         self.endpoint_badge = None
         self.proto_badge = None
         self.tools_badge = None
         self.reqs_badge = None
-        self.test_conn_btn = None
         self.conn_feedback_lbl = None
-        self.agent_feedback_lbl = None
-        self.log_filter_combo = None
-        self.active_log_filter = "ALL"
+
+        self.a_title = None
+        self.a_sub = None
+        self.sel_agent_lbl = None
+        self.agent_combo = None
+        self.agent_desc_box = None
         self.custom_agent_panel = None
+        self.copy_agent_cfg_btn = None
+        self.save_agent_cfg_btn = None
+        self.run_local_agent_btn = None
+        self.agent_feedback_lbl = None
+
+        self.t_title = None
+        self.tools_count_lbl = None
+        self.cat_lbl = None
+        self.category_combo = None
+        self.tool_search = None
+        self.tools_table = None
+
+        self.func_title_lbl = None
+        self.cff_badge = None
+        self.copilot_agent_badge = None
+        self.copilot_model_badge = None
+        self.jump_btn = None
+        self.target_func_lbl = None
+        self.func_combo = None
+        self.func_meta_lbl = None
+        self.btn_deobf = None
+        self.btn_sugg = None
+        self.btn_apply = None
+        self.btn_export = None
+        self.ai_output_view = None
+        self.prompt_input = None
+        self.ask_btn = None
+
+        self.copy_c_btn = None
+        self.save_c_btn = None
+        self.c_status_lbl = None
+        self.code_viewer = None
+
+        self.callers_header = None
+        self.callers_list = None
+        self.callees_header = None
+        self.callees_list = None
+
+        self.log_agent_lbl = None
+        self.filter_lbl = None
+        self.log_filter_combo = None
+        self.clear_log_btn = None
+        self.log_text = None
+        self.active_log_filter = "ALL"
+
+        self.p_title = None
+        self.custom_agent_badge = None
+        self.lbl_prov = None
         self.provider_combo = None
+        self.lbl_url = None
         self.base_url_input = None
+        self.lbl_key = None
         self.api_key_input = None
         self.toggle_key_btn = None
+        self.lbl_model = None
         self.model_combo = None
+        self.models_count_lbl = None
         self.fetch_models_btn = None
         self.test_provider_conn_btn = None
         self.test_model_btn = None
         self.save_custom_agent_btn = None
         self.fetch_status_lbl = None
         self.model_meta_lbl = None
-        self.models_count_lbl = None
         self.custom_agent_status_lbl = None
-        self.copilot_agent_badge = None
-        self.copilot_model_badge = None
+
         self.auto_fetch_timer = None
         self._fetch_seq = 0
         self._active_key_visible = False
@@ -4041,6 +4425,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             if "McpDashboardState" in globals():
                 McpDashboardState.load_agent_config()
             self.init_ui()
+            self.apply_language(McpDashboardState.get_language())
             self.refresh_all()
         except Exception as e:
             import traceback
@@ -4063,29 +4448,40 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         header_bar.setContentsMargins(4, 4, 4, 4)
         header_bar.setSpacing(10)
 
-        title_lbl = QtWidgets.QLabel("MCP DASHBOARD")
-        title_lbl.setStyleSheet("font-size: 13px; font-weight: 800; color: #8B5CF6; letter-spacing: 0.8px; padding: 2px 6px; background-color: #171D28; border: 1px solid #283142; border-radius: 4px;")
-        header_bar.addWidget(title_lbl)
+        self.title_lbl = QtWidgets.QLabel(McpDashboardState.t("title"))
+        self.title_lbl.setStyleSheet("font-size: 13px; font-weight: 800; color: #8B5CF6; letter-spacing: 0.8px; padding: 2px 6px; background-color: #171D28; border: 1px solid #283142; border-radius: 4px;")
+        header_bar.addWidget(self.title_lbl)
 
-        self.bin_lbl = QtWidgets.QLabel("libanogs.so (ARM64) | 5372 Funcs")
+        self.bin_lbl = QtWidgets.QLabel("libanogs.so (ARM64) | 5372 " + McpDashboardState.t("funcs_suffix"))
         self.bin_lbl.setStyleSheet("color: #94A3B8; font-size: 12px; font-weight: 600; padding: 2px 8px; background-color: #171D28; border: 1px solid #283142; border-radius: 4px;")
         header_bar.addWidget(self.bin_lbl)
 
         header_bar.addStretch()
 
+        self.lang_combo = QtWidgets.QComboBox()
+        self.lang_combo.addItem("English", "en")
+        self.lang_combo.addItem("Bahasa Indonesia", "id")
+        cur_lang = McpDashboardState.get_language()
+        l_idx = self.lang_combo.findData(cur_lang)
+        if l_idx >= 0:
+            self.lang_combo.setCurrentIndex(l_idx)
+        self.lang_combo.setStyleSheet("background-color: #171D28; color: #F1F5F9; border: 1px solid #38455B; border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 600;")
+        self.lang_combo.currentIndexChanged.connect(self.on_lang_combo_changed)
+        header_bar.addWidget(self.lang_combo)
+
         active_agent = "Antigravity"
         if "McpDashboardState" in globals():
             active_agent = McpDashboardState.get_active_agent_key()
-        self.agent_pill = QtWidgets.QLabel(f"Agent: {active_agent}")
+        self.agent_pill = QtWidgets.QLabel(f"{McpDashboardState.t('agent_prefix')} {active_agent}")
         self.agent_pill.setStyleSheet("background-color: #171D28; color: #38BDF8; border: 1px solid #38BDF8; border-radius: 12px; padding: 3px 12px; font-size: 11px; font-weight: 600;")
         header_bar.addWidget(self.agent_pill)
 
-        self.status_pill = QtWidgets.QLabel("MCP Online :13337")
+        self.status_pill = QtWidgets.QLabel(McpDashboardState.t("mcp_online"))
         self.status_pill.setStyleSheet("background-color: #064E3B; color: #34D399; border: 1px solid #34D399; border-radius: 12px; padding: 3px 12px; font-size: 11px; font-weight: 600;")
         header_bar.addWidget(self.status_pill)
 
-        self.refresh_btn = QtWidgets.QPushButton("Refresh")
-        self.refresh_btn.setToolTip("Reload binary state, cursor info, and server telemetry")
+        self.refresh_btn = QtWidgets.QPushButton(McpDashboardState.t("refresh"))
+        self.refresh_btn.setToolTip(McpDashboardState.t("refresh_tooltip"))
         self.refresh_btn.clicked.connect(self.on_refresh_clicked)
         header_bar.addWidget(self.refresh_btn)
 
@@ -4095,22 +4491,157 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         self.tabs.setFocusPolicy(QtCore.Qt.TabFocus)
 
         tab_mcp = self.create_mcp_dashboard_tab()
-        self.tabs.addTab(tab_mcp, "MCP Server && Agents")
+        self.tabs.addTab(tab_mcp, McpDashboardState.t("tab_mcp"))
 
         tab_ai = self.create_copilot_tab()
-        self.tabs.addTab(tab_ai, "AI Copilot && Deobfuscation")
+        self.tabs.addTab(tab_ai, McpDashboardState.t("tab_copilot"))
 
         tab_code = self.create_decompiled_c_tab()
-        self.tabs.addTab(tab_code, "Decompiled C")
+        self.tabs.addTab(tab_code, McpDashboardState.t("tab_decompiled"))
 
         tab_xrefs = self.create_xrefs_tab()
-        self.tabs.addTab(tab_xrefs, "Calls && Xrefs")
+        self.tabs.addTab(tab_xrefs, McpDashboardState.t("tab_xrefs"))
 
         tab_log = self.create_log_tab()
-        self.tabs.addTab(tab_log, "Activity Log")
+        self.tabs.addTab(tab_log, McpDashboardState.t("tab_log"))
 
         root_layout.addWidget(self.tabs)
         self.parent.setLayout(root_layout)
+
+    def on_lang_combo_changed(self, idx):
+        if idx < 0 or not self.lang_combo:
+            return
+        lang = self.lang_combo.itemData(idx)
+        if lang and lang in ("en", "id"):
+            McpDashboardState.set_language(lang)
+
+    def apply_language(self, lang):
+        if not QtWidgets or not self.parent:
+            return
+        t = lambda k, **kw: McpDashboardState.t(k, **kw)
+        if self.title_lbl:
+            self.title_lbl.setText(t("title"))
+        if self.tabs:
+            self.tabs.setTabText(0, t("tab_mcp"))
+            self.tabs.setTabText(1, t("tab_copilot"))
+            self.tabs.setTabText(2, t("tab_decompiled"))
+            self.tabs.setTabText(3, t("tab_xrefs"))
+            self.tabs.setTabText(4, t("tab_log"))
+        if self.refresh_btn and self.refresh_btn.isEnabled():
+            self.refresh_btn.setText(t("refresh"))
+            self.refresh_btn.setToolTip(t("refresh_tooltip"))
+        if self.s_title:
+            self.s_title.setText(t("server_status_title"))
+        if self.copy_url_btn:
+            self.copy_url_btn.setText(t("copy_mcp_url"))
+        if self.test_conn_btn and self.test_conn_btn.isEnabled():
+            self.test_conn_btn.setText(t("test_connection"))
+        if self.proto_badge:
+            self.proto_badge.setText(t("proto_badge"))
+        if self.tools_badge:
+            self.tools_badge.setText(t("tools_badge"))
+        if self.a_title:
+            self.a_title.setText(t("user_agent_cfg_title"))
+        if self.a_sub:
+            self.a_sub.setText(t("user_agent_cfg_sub"))
+        if self.sel_agent_lbl:
+            self.sel_agent_lbl.setText(t("select_agent_lbl"))
+        if self.copy_agent_cfg_btn:
+            self.copy_agent_cfg_btn.setText(t("copy_agent_cfg"))
+        if self.save_agent_cfg_btn:
+            self.save_agent_cfg_btn.setText(t("save_agent_pref"))
+        if self.run_local_agent_btn:
+            self.run_local_agent_btn.setText(t("run_local_agent"))
+        if self.t_title:
+            self.t_title.setText(t("tools_catalog_title"))
+        if self.cat_lbl:
+            self.cat_lbl.setText(t("category_lbl"))
+        if self.category_combo and self.category_combo.count() >= 8:
+            self.category_combo.setItemText(0, t("all_categories"))
+            self.category_combo.setItemText(1, t("cat_nav"))
+            self.category_combo.setItemText(2, t("cat_calls"))
+            self.category_combo.setItemText(3, t("cat_mod"))
+            self.category_combo.setItemText(4, t("cat_stack"))
+            self.category_combo.setItemText(5, t("cat_struct"))
+            self.category_combo.setItemText(6, t("cat_mem"))
+            self.category_combo.setItemText(7, t("cat_dbg"))
+        if self.tool_search:
+            self.tool_search.setPlaceholderText(t("tools_filter_placeholder"))
+        if self.tools_table:
+            self.tools_table.setHorizontalHeaderLabels([
+                t("col_no"),
+                t("col_method_name"),
+                t("col_category"),
+                t("col_calls"),
+                t("col_desc")
+            ])
+        if self.cff_badge:
+            self.cff_badge.setText(t("cff_badge"))
+        if self.jump_btn:
+            self.jump_btn.setText(t("jump_in_ida"))
+        if self.target_func_lbl:
+            self.target_func_lbl.setText(t("target_func_lbl"))
+        if self.btn_deobf:
+            self.btn_deobf.setText(t("btn_deobfuscate"))
+        if self.btn_sugg:
+            self.btn_sugg.setText(t("btn_suggest_renames"))
+        if self.btn_apply:
+            self.btn_apply.setText(t("btn_apply_renames"))
+        active_agent = McpDashboardState.get_active_agent_key()
+        if self.agent_pill:
+            self.agent_pill.setText(f"{t('agent_prefix')} {active_agent}")
+        if self.btn_export:
+            self.btn_export.setText(t("btn_send_to_agent", agent=active_agent))
+        if self.ai_output_view and not self.ai_output_view.toPlainText().strip():
+            self.ai_output_view.setPlaceholderText(t("ai_placeholder"))
+        if self.prompt_input:
+            self.prompt_input.setPlaceholderText(t("ask_placeholder", agent=active_agent))
+        if self.ask_btn:
+            self.ask_btn.setText(t("ask_btn", agent=active_agent))
+        if self.copy_c_btn:
+            self.copy_c_btn.setText(t("copy_c_code"))
+        if self.save_c_btn:
+            self.save_c_btn.setText(t("save_c_file"))
+        if self.log_agent_lbl:
+            self.log_agent_lbl.setText(t("log_stream_title", agent=active_agent))
+        if self.filter_lbl:
+            self.filter_lbl.setText(t("filter_event_lbl"))
+        if self.log_filter_combo and self.log_filter_combo.count() >= 5:
+            self.log_filter_combo.setItemText(0, t("all_events"))
+            self.log_filter_combo.setItemText(1, t("agent_calls"))
+            self.log_filter_combo.setItemText(2, t("agent_success"))
+            self.log_filter_combo.setItemText(3, t("errors"))
+            self.log_filter_combo.setItemText(4, t("ui_actions"))
+        if self.clear_log_btn:
+            self.clear_log_btn.setText(t("clear_log"))
+        if self.p_title:
+            self.p_title.setText(t("custom_agent_title"))
+        if self.custom_agent_badge:
+            self.custom_agent_badge.setText(t("direct_llm_mode"))
+        if self.lbl_prov:
+            self.lbl_prov.setText(t("provider_name_lbl"))
+        if self.lbl_url:
+            self.lbl_url.setText(t("base_url_lbl"))
+        if self.lbl_key:
+            self.lbl_key.setText(t("api_key_lbl"))
+        if self.api_key_input:
+            self.api_key_input.setPlaceholderText(t("api_key_placeholder"))
+        if self.toggle_key_btn:
+            self.toggle_key_btn.setText(t("hide_key") if self._active_key_visible else t("show_key"))
+        if self.lbl_model:
+            self.lbl_model.setText(t("model_id_lbl"))
+        if self.model_combo:
+            self.model_combo.setToolTip(t("model_combo_tooltip"))
+        if self.fetch_models_btn and self.fetch_models_btn.isEnabled():
+            self.fetch_models_btn.setText(t("fetch_models"))
+        if self.test_provider_conn_btn and self.test_provider_conn_btn.isEnabled():
+            self.test_provider_conn_btn.setText(t("test_connection"))
+        if self.test_model_btn and self.test_model_btn.isEnabled():
+            self.test_model_btn.setText(t("test_selected_model"))
+        if self.save_custom_agent_btn:
+            self.save_custom_agent_btn.setText(t("save_agent_config"))
+        self.update_agent_view()
+        self.refresh_all()
 
     def create_mcp_dashboard_tab(self):
         w = QtWidgets.QWidget()
@@ -4125,16 +4656,16 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         srv_layout.setSpacing(10)
 
         s_top = QtWidgets.QHBoxLayout()
-        s_title = QtWidgets.QLabel("Model Context Protocol (MCP) Server Status")
-        s_title.setStyleSheet("font-size: 13px; font-weight: 700; color: #E8EDF5;")
-        s_top.addWidget(s_title)
+        self.s_title = QtWidgets.QLabel(McpDashboardState.t("server_status_title"))
+        self.s_title.setStyleSheet("font-size: 13px; font-weight: 700; color: #E8EDF5;")
+        s_top.addWidget(self.s_title)
         s_top.addStretch()
 
-        copy_url_btn = QtWidgets.QPushButton("Copy MCP URL")
-        copy_url_btn.clicked.connect(self.on_copy_mcp_url)
-        s_top.addWidget(copy_url_btn)
+        self.copy_url_btn = QtWidgets.QPushButton(McpDashboardState.t("copy_mcp_url"))
+        self.copy_url_btn.clicked.connect(self.on_copy_mcp_url)
+        s_top.addWidget(self.copy_url_btn)
 
-        self.test_conn_btn = QtWidgets.QPushButton("Test Connection")
+        self.test_conn_btn = QtWidgets.QPushButton(McpDashboardState.t("test_connection"))
         self.test_conn_btn.setObjectName("accentAction")
         self.test_conn_btn.clicked.connect(self.on_test_mcp_clicked)
         s_top.addWidget(self.test_conn_btn)
@@ -4147,15 +4678,15 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         self.endpoint_badge.setStyleSheet("background-color: #171D28; border: 1px solid #283142; border-radius: 4px; padding: 5px 10px; color: #38BDF8; font-family: monospace; font-size: 11px;")
         metrics_row.addWidget(self.endpoint_badge)
 
-        self.proto_badge = QtWidgets.QLabel("Protocol: JSON-RPC 2.0")
+        self.proto_badge = QtWidgets.QLabel(McpDashboardState.t("proto_badge"))
         self.proto_badge.setStyleSheet("background-color: #171D28; border: 1px solid #283142; border-radius: 4px; padding: 5px 10px; color: #94A3B8; font-size: 11px;")
         metrics_row.addWidget(self.proto_badge)
 
-        self.tools_badge = QtWidgets.QLabel("Tools: 59 Methods")
+        self.tools_badge = QtWidgets.QLabel(McpDashboardState.t("tools_badge"))
         self.tools_badge.setStyleSheet("background-color: #171D28; border: 1px solid #283142; border-radius: 4px; padding: 5px 10px; color: #94A3B8; font-size: 11px;")
         metrics_row.addWidget(self.tools_badge)
 
-        self.reqs_badge = QtWidgets.QLabel("Requests: 0 Processed")
+        self.reqs_badge = QtWidgets.QLabel(McpDashboardState.t("reqs_badge", count=0))
         self.reqs_badge.setStyleSheet("background-color: #171D28; border: 1px solid #283142; border-radius: 4px; padding: 5px 10px; color: #34D399; font-weight: 600; font-size: 11px;")
         metrics_row.addWidget(self.reqs_badge)
 
@@ -4176,20 +4707,20 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         agent_layout.setSpacing(8)
 
         a_top = QtWidgets.QHBoxLayout()
-        a_title = QtWidgets.QLabel("User Agent Configuration")
-        a_title.setStyleSheet("font-size: 13px; font-weight: 700; color: #8B5CF6;")
-        a_top.addWidget(a_title)
+        self.a_title = QtWidgets.QLabel(McpDashboardState.t("user_agent_cfg_title"))
+        self.a_title.setStyleSheet("font-size: 13px; font-weight: 700; color: #8B5CF6;")
+        a_top.addWidget(self.a_title)
 
-        a_sub = QtWidgets.QLabel("(Integrated with AI Pair Programmer)")
-        a_sub.setStyleSheet("font-size: 11px; color: #64748B;")
-        a_top.addWidget(a_sub)
+        self.a_sub = QtWidgets.QLabel(McpDashboardState.t("user_agent_cfg_sub"))
+        self.a_sub.setStyleSheet("font-size: 11px; color: #64748B;")
+        a_top.addWidget(self.a_sub)
         a_top.addStretch()
         agent_layout.addLayout(a_top)
 
         sel_row = QtWidgets.QHBoxLayout()
-        sel_lbl = QtWidgets.QLabel("Pilih AI Agent Anda:")
-        sel_lbl.setStyleSheet("font-weight: 600; color: #E8EDF5;")
-        sel_row.addWidget(sel_lbl)
+        self.sel_agent_lbl = QtWidgets.QLabel(McpDashboardState.t("select_agent_lbl"))
+        self.sel_agent_lbl.setStyleSheet("font-weight: 600; color: #E8EDF5;")
+        sel_row.addWidget(self.sel_agent_lbl)
 
         self.agent_combo = QtWidgets.QComboBox()
         self.agent_combo.addItem("Antigravity Agent (Google DeepMind)", "Antigravity")
@@ -4220,15 +4751,15 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         agent_layout.addWidget(self.custom_agent_panel)
 
         agent_btn_row = QtWidgets.QHBoxLayout()
-        self.copy_agent_cfg_btn = QtWidgets.QPushButton("Copy Agent Config (JSON)")
+        self.copy_agent_cfg_btn = QtWidgets.QPushButton(McpDashboardState.t("copy_agent_cfg"))
         self.copy_agent_cfg_btn.clicked.connect(self.on_copy_agent_config)
         agent_btn_row.addWidget(self.copy_agent_cfg_btn)
 
-        self.save_agent_cfg_btn = QtWidgets.QPushButton("Save Agent Preference")
+        self.save_agent_cfg_btn = QtWidgets.QPushButton(McpDashboardState.t("save_agent_pref"))
         self.save_agent_cfg_btn.clicked.connect(self.on_save_agent_preference)
         agent_btn_row.addWidget(self.save_agent_cfg_btn)
 
-        self.run_local_agent_btn = QtWidgets.QPushButton("Run ida_mcp_agent")
+        self.run_local_agent_btn = QtWidgets.QPushButton(McpDashboardState.t("run_local_agent"))
         self.run_local_agent_btn.setObjectName("primaryAction")
         self.run_local_agent_btn.clicked.connect(self.on_run_local_agent)
         agent_btn_row.addWidget(self.run_local_agent_btn)
@@ -4249,33 +4780,33 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         t_layout.setSpacing(8)
 
         t_top = QtWidgets.QHBoxLayout()
-        t_title = QtWidgets.QLabel("MCP Registered Tools Catalog")
-        t_title.setStyleSheet("font-size: 13px; font-weight: 700; color: #E8EDF5;")
-        t_top.addWidget(t_title)
+        self.t_title = QtWidgets.QLabel(McpDashboardState.t("tools_catalog_title"))
+        self.t_title.setStyleSheet("font-size: 13px; font-weight: 700; color: #E8EDF5;")
+        t_top.addWidget(self.t_title)
 
-        self.tools_count_lbl = QtWidgets.QLabel("(59 Methods Registered)")
+        self.tools_count_lbl = QtWidgets.QLabel(McpDashboardState.t("tools_registered_count", count=59))
         self.tools_count_lbl.setStyleSheet("font-size: 11px; color: #94A3B8; font-weight: 600;")
         t_top.addWidget(self.tools_count_lbl)
         t_top.addStretch()
 
-        cat_lbl = QtWidgets.QLabel("Category:")
-        cat_lbl.setStyleSheet("color: #94A3B8; font-size: 12px;")
-        t_top.addWidget(cat_lbl)
+        self.cat_lbl = QtWidgets.QLabel(McpDashboardState.t("category_lbl"))
+        self.cat_lbl.setStyleSheet("color: #94A3B8; font-size: 12px;")
+        t_top.addWidget(self.cat_lbl)
 
         self.category_combo = QtWidgets.QComboBox()
-        self.category_combo.addItem("All Categories", "")
-        self.category_combo.addItem("Navigation", "Navigation")
-        self.category_combo.addItem("Calls", "Calls")
-        self.category_combo.addItem("Modification", "Modification")
-        self.category_combo.addItem("Stack", "Stack")
-        self.category_combo.addItem("Structures", "Structures")
-        self.category_combo.addItem("Memory", "Memory")
-        self.category_combo.addItem("Debugger", "Debugger")
+        self.category_combo.addItem(McpDashboardState.t("all_categories"), "")
+        self.category_combo.addItem(McpDashboardState.t("cat_nav"), "Navigation")
+        self.category_combo.addItem(McpDashboardState.t("cat_calls"), "Calls")
+        self.category_combo.addItem(McpDashboardState.t("cat_mod"), "Modification")
+        self.category_combo.addItem(McpDashboardState.t("cat_stack"), "Stack")
+        self.category_combo.addItem(McpDashboardState.t("cat_struct"), "Structures")
+        self.category_combo.addItem(McpDashboardState.t("cat_mem"), "Memory")
+        self.category_combo.addItem(McpDashboardState.t("cat_dbg"), "Debugger")
         self.category_combo.currentIndexChanged.connect(self.filter_tools_table)
         t_top.addWidget(self.category_combo)
 
         self.tool_search = QtWidgets.QLineEdit()
-        self.tool_search.setPlaceholderText("Filter tools (e.g. decompile, dbg, struct, xref)...")
+        self.tool_search.setPlaceholderText(McpDashboardState.t("tools_filter_placeholder"))
         self.tool_search.textChanged.connect(self.filter_tools_table)
         self.tool_search.setMinimumWidth(260)
         t_top.addWidget(self.tool_search)
@@ -4283,7 +4814,13 @@ class McpDashboardTab(ida_kernwin.PluginForm):
 
         self.tools_table = QtWidgets.QTableWidget()
         self.tools_table.setColumnCount(5)
-        self.tools_table.setHorizontalHeaderLabels(["No", "Method Name", "Category", "Calls", "Description"])
+        self.tools_table.setHorizontalHeaderLabels([
+            McpDashboardState.t("col_no"),
+            McpDashboardState.t("col_method_name"),
+            McpDashboardState.t("col_category"),
+            McpDashboardState.t("col_calls"),
+            McpDashboardState.t("col_desc")
+        ])
         self.tools_table.horizontalHeader().setStretchLastSection(True)
         self.tools_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.tools_table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
@@ -4310,16 +4847,16 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         card_layout.setSpacing(8)
 
         c_top = QtWidgets.QHBoxLayout()
-        self.func_title_lbl = QtWidgets.QLabel("Function: Loading...")
+        self.func_title_lbl = QtWidgets.QLabel(McpDashboardState.t("func_title_loading"))
         self.func_title_lbl.setStyleSheet("font-size: 13px; font-weight: 700; color: #E8EDF5;")
         c_top.addWidget(self.func_title_lbl)
 
-        self.cff_badge = QtWidgets.QLabel("CFF OBFUSCATED")
+        self.cff_badge = QtWidgets.QLabel(McpDashboardState.t("cff_badge"))
         self.cff_badge.setStyleSheet("background-color: #78350F; color: #FBBF24; border: 1px solid #FBBF24; border-radius: 4px; font-size: 10px; font-weight: 700; padding: 2px 8px;")
         self.cff_badge.setVisible(False)
         c_top.addWidget(self.cff_badge)
 
-        self.copilot_agent_badge = QtWidgets.QLabel("Agent: Antigravity")
+        self.copilot_agent_badge = QtWidgets.QLabel(f"{McpDashboardState.t('agent_prefix')} Antigravity")
         self.copilot_agent_badge.setStyleSheet("background-color: #1E293B; color: #38BDF8; border: 1px solid #334155; border-radius: 4px; font-size: 10px; font-weight: 700; padding: 2px 8px;")
         c_top.addWidget(self.copilot_agent_badge)
 
@@ -4330,14 +4867,15 @@ class McpDashboardTab(ida_kernwin.PluginForm):
 
         c_top.addStretch()
 
-        jump_btn = QtWidgets.QPushButton("Jump in IDA")
-        jump_btn.setMaximumWidth(110)
-        jump_btn.clicked.connect(self.on_jump_to_current)
-        c_top.addWidget(jump_btn)
+        self.jump_btn = QtWidgets.QPushButton(McpDashboardState.t("jump_in_ida"))
+        self.jump_btn.setMaximumWidth(120)
+        self.jump_btn.clicked.connect(self.on_jump_to_current)
+        c_top.addWidget(self.jump_btn)
         card_layout.addLayout(c_top)
 
         sel_row = QtWidgets.QHBoxLayout()
-        sel_row.addWidget(QtWidgets.QLabel("Target Function:"))
+        self.target_func_lbl = QtWidgets.QLabel(McpDashboardState.t("target_func_lbl"))
+        sel_row.addWidget(self.target_func_lbl)
         self.func_combo = QtWidgets.QComboBox()
         self.func_combo.setEditable(True)
         self.func_combo.setMinimumWidth(320)
@@ -4352,24 +4890,24 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         ai_layout.addWidget(card)
 
         btn_row = QtWidgets.QHBoxLayout()
-        btn_deobf = QtWidgets.QPushButton("Deobfuscate && Explain")
-        btn_deobf.setObjectName("primaryAction")
-        btn_deobf.clicked.connect(self.on_deobfuscate_clicked)
-        btn_row.addWidget(btn_deobf)
+        self.btn_deobf = QtWidgets.QPushButton(McpDashboardState.t("btn_deobfuscate"))
+        self.btn_deobf.setObjectName("primaryAction")
+        self.btn_deobf.clicked.connect(self.on_deobfuscate_clicked)
+        btn_row.addWidget(self.btn_deobf)
 
-        btn_sugg = QtWidgets.QPushButton("Suggest Renames")
-        btn_sugg.clicked.connect(self.on_suggest_renames_clicked)
-        btn_row.addWidget(btn_sugg)
+        self.btn_sugg = QtWidgets.QPushButton(McpDashboardState.t("btn_suggest_renames"))
+        self.btn_sugg.clicked.connect(self.on_suggest_renames_clicked)
+        btn_row.addWidget(self.btn_sugg)
 
-        btn_apply = QtWidgets.QPushButton("Apply Renames to IDA")
-        btn_apply.setObjectName("successAction")
-        btn_apply.clicked.connect(self.on_apply_renames_clicked)
-        btn_row.addWidget(btn_apply)
+        self.btn_apply = QtWidgets.QPushButton(McpDashboardState.t("btn_apply_renames"))
+        self.btn_apply.setObjectName("successAction")
+        self.btn_apply.clicked.connect(self.on_apply_renames_clicked)
+        btn_row.addWidget(self.btn_apply)
 
         active_agent = "Antigravity"
         if "McpDashboardState" in globals():
             active_agent = McpDashboardState.get_active_agent_key()
-        self.btn_export = QtWidgets.QPushButton(f"Send to {active_agent}")
+        self.btn_export = QtWidgets.QPushButton(McpDashboardState.t("btn_send_to_agent", agent=active_agent))
         self.btn_export.setObjectName("accentAction")
         self.btn_export.clicked.connect(self.on_send_func)
         btn_row.addWidget(self.btn_export)
@@ -4377,16 +4915,16 @@ class McpDashboardTab(ida_kernwin.PluginForm):
 
         self.ai_output_view = QtWidgets.QTextEdit()
         self.ai_output_view.setReadOnly(True)
-        self.ai_output_view.setPlaceholderText("Agent analysis, deobfuscated pseudocode summary, and reverse engineering reasoning will appear here...")
+        self.ai_output_view.setPlaceholderText(McpDashboardState.t("ai_placeholder"))
         ai_layout.addWidget(self.ai_output_view)
 
         prompt_box = QtWidgets.QHBoxLayout()
         self.prompt_input = QtWidgets.QLineEdit()
-        self.prompt_input.setPlaceholderText(f"Ask {active_agent}: e.g. 'Bagaimana cara bypass pemeriksaan ini?', 'Jelaskan logika CFF'...")
+        self.prompt_input.setPlaceholderText(McpDashboardState.t("ask_placeholder", agent=active_agent))
         self.prompt_input.returnPressed.connect(self.on_submit_prompt)
         prompt_box.addWidget(self.prompt_input)
 
-        self.ask_btn = QtWidgets.QPushButton(f"Ask {active_agent}")
+        self.ask_btn = QtWidgets.QPushButton(McpDashboardState.t("ask_btn", agent=active_agent))
         self.ask_btn.setObjectName("primaryAction")
         self.ask_btn.clicked.connect(self.on_submit_prompt)
         prompt_box.addWidget(self.ask_btn)
@@ -4401,13 +4939,13 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         code_layout.setSpacing(8)
 
         c_toolbar = QtWidgets.QHBoxLayout()
-        copy_c_btn = QtWidgets.QPushButton("Copy C Code")
-        copy_c_btn.clicked.connect(self.on_copy_c_code)
-        c_toolbar.addWidget(copy_c_btn)
+        self.copy_c_btn = QtWidgets.QPushButton(McpDashboardState.t("copy_c_code"))
+        self.copy_c_btn.clicked.connect(self.on_copy_c_code)
+        c_toolbar.addWidget(self.copy_c_btn)
 
-        save_c_btn = QtWidgets.QPushButton("Save to ida_current_function.c")
-        save_c_btn.clicked.connect(self.on_send_func)
-        c_toolbar.addWidget(save_c_btn)
+        self.save_c_btn = QtWidgets.QPushButton(McpDashboardState.t("save_c_file"))
+        self.save_c_btn.clicked.connect(self.on_send_func)
+        c_toolbar.addWidget(self.save_c_btn)
 
         self.c_status_lbl = QtWidgets.QLabel("")
         self.c_status_lbl.setStyleSheet("color: #34D399; font-size: 11px; font-weight: 600; padding-left: 8px;")
@@ -4431,7 +4969,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         col1_frame = QtWidgets.QFrame()
         col1_frame.setObjectName("cardPanel")
         col1 = QtWidgets.QVBoxLayout(col1_frame)
-        self.callers_header = QtWidgets.QLabel("Callers (Functions calling this target):")
+        self.callers_header = QtWidgets.QLabel(McpDashboardState.t("callers_header", count=0))
         self.callers_header.setStyleSheet("font-weight: 700; color: #38BDF8; font-size: 12px;")
         col1.addWidget(self.callers_header)
         self.callers_list = QtWidgets.QListWidget()
@@ -4442,7 +4980,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         col2_frame = QtWidgets.QFrame()
         col2_frame.setObjectName("cardPanel")
         col2 = QtWidgets.QVBoxLayout(col2_frame)
-        self.callees_header = QtWidgets.QLabel("Callees (Subroutines called by this target):")
+        self.callees_header = QtWidgets.QLabel(McpDashboardState.t("callees_header", count=0))
         self.callees_header.setStyleSheet("font-weight: 700; color: #8B5CF6; font-size: 12px;")
         col2.addWidget(self.callees_header)
         self.callees_list = QtWidgets.QListWidget()
@@ -4462,27 +5000,27 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         active_agent = "Antigravity"
         if "McpDashboardState" in globals():
             active_agent = McpDashboardState.get_active_agent_key()
-        self.log_agent_lbl = QtWidgets.QLabel(f"Live MCP RPC Stream: Connected to {active_agent}")
+        self.log_agent_lbl = QtWidgets.QLabel(McpDashboardState.t("log_stream_title", agent=active_agent))
         self.log_agent_lbl.setStyleSheet("font-weight: 600; color: #38BDF8; font-size: 12px;")
         log_top.addWidget(self.log_agent_lbl)
         log_top.addStretch()
 
-        filter_lbl = QtWidgets.QLabel("Filter Event:")
-        filter_lbl.setStyleSheet("color: #94A3B8; font-size: 12px;")
-        log_top.addWidget(filter_lbl)
+        self.filter_lbl = QtWidgets.QLabel(McpDashboardState.t("filter_event_lbl"))
+        self.filter_lbl.setStyleSheet("color: #94A3B8; font-size: 12px;")
+        log_top.addWidget(self.filter_lbl)
 
         self.log_filter_combo = QtWidgets.QComboBox()
-        self.log_filter_combo.addItem("All Events", "ALL")
-        self.log_filter_combo.addItem("Agent Calls", "agent_call")
-        self.log_filter_combo.addItem("Agent Success", "agent_success")
-        self.log_filter_combo.addItem("Errors", "agent_error")
-        self.log_filter_combo.addItem("UI Actions", "ui_action")
+        self.log_filter_combo.addItem(McpDashboardState.t("all_events"), "ALL")
+        self.log_filter_combo.addItem(McpDashboardState.t("agent_calls"), "agent_call")
+        self.log_filter_combo.addItem(McpDashboardState.t("agent_success"), "agent_success")
+        self.log_filter_combo.addItem(McpDashboardState.t("errors"), "agent_error")
+        self.log_filter_combo.addItem(McpDashboardState.t("ui_actions"), "ui_action")
         self.log_filter_combo.currentIndexChanged.connect(self.on_log_filter_changed)
         log_top.addWidget(self.log_filter_combo)
 
-        clear_btn = QtWidgets.QPushButton("Clear Log")
-        clear_btn.clicked.connect(self.on_clear_log)
-        log_top.addWidget(clear_btn)
+        self.clear_log_btn = QtWidgets.QPushButton(McpDashboardState.t("clear_log"))
+        self.clear_log_btn.clicked.connect(self.on_clear_log)
+        log_top.addWidget(self.clear_log_btn)
         log_layout.addLayout(log_top)
 
         self.log_text = QtWidgets.QTextEdit()
@@ -4494,10 +5032,10 @@ class McpDashboardTab(ida_kernwin.PluginForm):
     def on_refresh_clicked(self):
         if self.refresh_btn:
             self.refresh_btn.setEnabled(False)
-            self.refresh_btn.setText("Refreshing...")
+            self.refresh_btn.setText(McpDashboardState.t("refreshing"))
         if self.test_conn_btn and not self.test_conn_btn.isEnabled():
             self.test_conn_btn.setEnabled(True)
-            self.test_conn_btn.setText("Test Connection")
+            self.test_conn_btn.setText(McpDashboardState.t("test_connection"))
         self.refresh_all()
         if QtCore:
             QtCore.QTimer.singleShot(400, self.restore_refresh_btn)
@@ -4505,13 +5043,13 @@ class McpDashboardTab(ida_kernwin.PluginForm):
     def restore_refresh_btn(self):
         if self.refresh_btn:
             self.refresh_btn.setEnabled(True)
-            self.refresh_btn.setText("Refresh")
+            self.refresh_btn.setText(McpDashboardState.t("refresh"))
 
     def on_copy_mcp_url(self):
         if QtWidgets:
             QtWidgets.QApplication.clipboard().setText("http://127.0.0.1:13337/mcp")
         if self.conn_feedback_lbl:
-            self.conn_feedback_lbl.setText("Endpoint URL copied to clipboard: http://127.0.0.1:13337/mcp")
+            self.conn_feedback_lbl.setText(McpDashboardState.t("url_copied"))
             self.conn_feedback_lbl.setStyleSheet("background-color: #064E3B; color: #34D399; border: 1px solid #34D399; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;")
             self.conn_feedback_lbl.setVisible(True)
             if QtCore:
@@ -4520,18 +5058,18 @@ class McpDashboardTab(ida_kernwin.PluginForm):
     def _apply_test_connection_result(self, ok, msg):
         if self.status_pill:
             if ok:
-                self.status_pill.setText("MCP Online :13337")
+                self.status_pill.setText(McpDashboardState.t("mcp_online"))
                 self.status_pill.setStyleSheet("background-color: #064E3B; color: #34D399; border: 1px solid #34D399; border-radius: 12px; padding: 3px 12px; font-size: 11px; font-weight: 600;")
             else:
-                self.status_pill.setText("MCP Offline")
+                self.status_pill.setText(McpDashboardState.t("mcp_offline"))
                 self.status_pill.setStyleSheet("background-color: #4C0519; color: #FB7185; border: 1px solid #FB7185; border-radius: 12px; padding: 3px 12px; font-size: 11px; font-weight: 600;")
 
         if self.conn_feedback_lbl:
             if ok:
-                self.conn_feedback_lbl.setText(f"SUCCESS: {msg}")
+                self.conn_feedback_lbl.setText(McpDashboardState.t("conn_success", msg=msg))
                 self.conn_feedback_lbl.setStyleSheet("background-color: #064E3B; color: #34D399; border: 1px solid #34D399; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;")
             else:
-                self.conn_feedback_lbl.setText(f"FAILED: {msg}")
+                self.conn_feedback_lbl.setText(McpDashboardState.t("conn_failed", msg=msg))
                 self.conn_feedback_lbl.setStyleSheet("background-color: #4C0519; color: #FB7185; border: 1px solid #FB7185; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;")
             self.conn_feedback_lbl.setVisible(True)
             if QtCore:
@@ -4539,7 +5077,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
 
         if self.test_conn_btn:
             self.test_conn_btn.setEnabled(True)
-            self.test_conn_btn.setText("Test Connection")
+            self.test_conn_btn.setText(McpDashboardState.t("test_connection"))
 
         if "McpDashboardState" in globals():
             McpDashboardState.log_event("ui_action", f"MCP Connection Test: {msg}")
@@ -4547,9 +5085,9 @@ class McpDashboardTab(ida_kernwin.PluginForm):
     def on_test_mcp_clicked(self):
         if self.test_conn_btn:
             self.test_conn_btn.setEnabled(False)
-            self.test_conn_btn.setText("Testing...")
+            self.test_conn_btn.setText(McpDashboardState.t("testing_connection"))
         if self.conn_feedback_lbl:
-            self.conn_feedback_lbl.setText("Testing MCP endpoint at http://127.0.0.1:13337/mcp...")
+            self.conn_feedback_lbl.setText(McpDashboardState.t("testing_endpoint"))
             self.conn_feedback_lbl.setStyleSheet("background-color: #1E293B; color: #94A3B8; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600;")
             self.conn_feedback_lbl.setVisible(True)
 
@@ -4609,7 +5147,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             if "McpDashboardState" in globals():
                 info = McpDashboardState.get_binary_info()
             if info and self.bin_lbl:
-                self.bin_lbl.setText(f"{info['name']} ({info['proc']} 64-bit: {info['is_64']}) | {info['total_funcs']} Funcs")
+                self.bin_lbl.setText(f"{info['name']} ({info['proc']} 64-bit: {info['is_64']}) | {info['total_funcs']} {McpDashboardState.t('funcs_suffix')}")
             self.populate_functions_combo()
             self.refresh_cursor_info()
             self.update_telemetry_ui()
@@ -4622,7 +5160,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             if "McpDashboardState" in globals():
                 total_reqs = McpDashboardState.total_rpc_requests
             if self.reqs_badge:
-                self.reqs_badge.setText(f"Requests: {total_reqs} Processed")
+                self.reqs_badge.setText(McpDashboardState.t("reqs_badge", count=total_reqs))
             self.populate_tools_table()
         except Exception:
             pass
@@ -4637,16 +5175,17 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             self.on_agent_changed(key)
 
     def on_agent_changed(self, agent_key):
+        t = lambda k, **kw: McpDashboardState.t(k, **kw)
         if self.agent_pill:
-            self.agent_pill.setText(f"Agent: {agent_key}")
+            self.agent_pill.setText(f"{t('agent_prefix')} {agent_key}")
         if self.btn_export:
-            self.btn_export.setText(f"Send to {agent_key}")
+            self.btn_export.setText(t("btn_send_to_agent", agent=agent_key))
         if self.prompt_input:
-            self.prompt_input.setPlaceholderText(f"Ask {agent_key}: e.g. 'Bagaimana cara bypass pemeriksaan ini?', 'Jelaskan logika CFF'...")
+            self.prompt_input.setPlaceholderText(t("ask_placeholder", agent=agent_key))
         if self.ask_btn:
-            self.ask_btn.setText(f"Ask {agent_key}")
+            self.ask_btn.setText(t("ask_btn", agent=agent_key))
         if hasattr(self, "log_agent_lbl") and self.log_agent_lbl:
-            self.log_agent_lbl.setText(f"Live MCP RPC Stream: Connected to {agent_key}")
+            self.log_agent_lbl.setText(t("log_stream_title", agent=agent_key))
         if agent_key == "Direct_API":
             prov = self.provider_combo.currentText().strip() if self.provider_combo else "Direct AI"
             model = self.model_combo.currentText().strip() if self.model_combo else ""
@@ -4657,7 +5196,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                 self.copilot_model_badge.setVisible(True)
         else:
             if self.copilot_agent_badge:
-                self.copilot_agent_badge.setText(f"Agent: {agent_key}")
+                self.copilot_agent_badge.setText(f"{t('agent_prefix')} {agent_key}")
             if self.copilot_model_badge:
                 self.copilot_model_badge.setVisible(False)
         self.update_agent_view()
@@ -4671,11 +5210,11 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         l.setSpacing(8)
 
         p_header = QtWidgets.QHBoxLayout()
-        p_title = QtWidgets.QLabel("Custom AI Agent & Model Provider Configuration")
-        p_title.setStyleSheet("font-size: 12px; font-weight: 700; color: #38BDF8;")
-        p_header.addWidget(p_title)
+        self.p_title = QtWidgets.QLabel(McpDashboardState.t("custom_agent_title"))
+        self.p_title.setStyleSheet("font-size: 12px; font-weight: 700; color: #38BDF8;")
+        p_header.addWidget(self.p_title)
 
-        self.custom_agent_badge = QtWidgets.QLabel("Direct LLM Mode")
+        self.custom_agent_badge = QtWidgets.QLabel(McpDashboardState.t("direct_llm_mode"))
         self.custom_agent_badge.setStyleSheet("background-color: #1E293B; color: #94A3B8; border: 1px solid #334155; border-radius: 4px; padding: 2px 8px; font-size: 10px; font-weight: 600;")
         p_header.addWidget(self.custom_agent_badge)
         p_header.addStretch()
@@ -4685,9 +5224,9 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         grid.setHorizontalSpacing(10)
         grid.setVerticalSpacing(8)
 
-        lbl_prov = QtWidgets.QLabel("Provider Name:")
-        lbl_prov.setStyleSheet("color: #E8EDF5; font-weight: 600; font-size: 11px;")
-        grid.addWidget(lbl_prov, 0, 0)
+        self.lbl_prov = QtWidgets.QLabel(McpDashboardState.t("provider_name_lbl"))
+        self.lbl_prov.setStyleSheet("color: #E8EDF5; font-weight: 600; font-size: 11px;")
+        grid.addWidget(self.lbl_prov, 0, 0)
 
         self.provider_combo = QtWidgets.QComboBox()
         self.provider_combo.setEditable(True)
@@ -4702,36 +5241,36 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         self.provider_combo.currentIndexChanged.connect(self.on_provider_selected)
         grid.addWidget(self.provider_combo, 0, 1)
 
-        lbl_url = QtWidgets.QLabel("Base URL:")
-        lbl_url.setStyleSheet("color: #E8EDF5; font-weight: 600; font-size: 11px;")
-        grid.addWidget(lbl_url, 0, 2)
+        self.lbl_url = QtWidgets.QLabel(McpDashboardState.t("base_url_lbl"))
+        self.lbl_url.setStyleSheet("color: #E8EDF5; font-weight: 600; font-size: 11px;")
+        grid.addWidget(self.lbl_url, 0, 2)
 
         self.base_url_input = QtWidgets.QLineEdit()
         self.base_url_input.setPlaceholderText("https://kunciai.id/v1 or https://api.openai.com/v1")
         self.base_url_input.textChanged.connect(self.on_custom_input_debounced)
         grid.addWidget(self.base_url_input, 0, 3)
 
-        lbl_key = QtWidgets.QLabel("API Key:")
-        lbl_key.setStyleSheet("color: #E8EDF5; font-weight: 600; font-size: 11px;")
-        grid.addWidget(lbl_key, 1, 0)
+        self.lbl_key = QtWidgets.QLabel(McpDashboardState.t("api_key_lbl"))
+        self.lbl_key.setStyleSheet("color: #E8EDF5; font-weight: 600; font-size: 11px;")
+        grid.addWidget(self.lbl_key, 1, 0)
 
         key_box = QtWidgets.QHBoxLayout()
         key_box.setSpacing(4)
         self.api_key_input = QtWidgets.QLineEdit()
         self.api_key_input.setEchoMode(QtWidgets.QLineEdit.Password)
-        self.api_key_input.setPlaceholderText("Masukkan API Key (tersimpan terenkripsi)")
+        self.api_key_input.setPlaceholderText(McpDashboardState.t("api_key_placeholder"))
         self.api_key_input.textChanged.connect(self.on_custom_input_debounced)
         key_box.addWidget(self.api_key_input)
 
-        self.toggle_key_btn = QtWidgets.QPushButton("👁 Show")
+        self.toggle_key_btn = QtWidgets.QPushButton(McpDashboardState.t("show_key"))
         self.toggle_key_btn.setMaximumWidth(70)
         self.toggle_key_btn.clicked.connect(self.on_toggle_api_key_visibility)
         key_box.addWidget(self.toggle_key_btn)
         grid.addLayout(key_box, 1, 1)
 
-        lbl_model = QtWidgets.QLabel("Model ID:")
-        lbl_model.setStyleSheet("color: #E8EDF5; font-weight: 600; font-size: 11px;")
-        grid.addWidget(lbl_model, 1, 2)
+        self.lbl_model = QtWidgets.QLabel(McpDashboardState.t("model_id_lbl"))
+        self.lbl_model.setStyleSheet("color: #E8EDF5; font-weight: 600; font-size: 11px;")
+        grid.addWidget(self.lbl_model, 1, 2)
 
         model_box = QtWidgets.QHBoxLayout()
         model_box.setSpacing(6)
@@ -4739,10 +5278,10 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         self.model_combo.setEditable(True)
         self.model_combo.setMinimumWidth(220)
         self.model_combo.currentIndexChanged.connect(self.on_model_combo_changed)
-        self.model_combo.setToolTip("Daftar model dinamis dari API provider atau input manual sebagai fallback")
+        self.model_combo.setToolTip(McpDashboardState.t("model_combo_tooltip"))
         model_box.addWidget(self.model_combo)
 
-        self.models_count_lbl = QtWidgets.QLabel("(0 models)")
+        self.models_count_lbl = QtWidgets.QLabel(McpDashboardState.t("models_count", count=0))
         self.models_count_lbl.setStyleSheet("color: #94A3B8; font-size: 11px;")
         model_box.addWidget(self.models_count_lbl)
         grid.addLayout(model_box, 1, 3)
@@ -4752,21 +5291,21 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         btn_row = QtWidgets.QHBoxLayout()
         btn_row.setSpacing(8)
 
-        self.fetch_models_btn = QtWidgets.QPushButton("Fetch Models")
+        self.fetch_models_btn = QtWidgets.QPushButton(McpDashboardState.t("fetch_models"))
         self.fetch_models_btn.setObjectName("primaryAction")
         self.fetch_models_btn.clicked.connect(lambda: self.on_fetch_models_clicked(force=True, auto=False))
         btn_row.addWidget(self.fetch_models_btn)
 
-        self.test_provider_conn_btn = QtWidgets.QPushButton("Test Connection")
+        self.test_provider_conn_btn = QtWidgets.QPushButton(McpDashboardState.t("test_connection"))
         self.test_provider_conn_btn.clicked.connect(self.on_test_provider_connection_clicked)
         btn_row.addWidget(self.test_provider_conn_btn)
 
-        self.test_model_btn = QtWidgets.QPushButton("Test Selected Model")
+        self.test_model_btn = QtWidgets.QPushButton(McpDashboardState.t("test_selected_model"))
         self.test_model_btn.setObjectName("accentAction")
         self.test_model_btn.clicked.connect(self.on_test_selected_model_clicked)
         btn_row.addWidget(self.test_model_btn)
 
-        self.save_custom_agent_btn = QtWidgets.QPushButton("Save Agent Config")
+        self.save_custom_agent_btn = QtWidgets.QPushButton(McpDashboardState.t("save_agent_config"))
         self.save_custom_agent_btn.setObjectName("successAction")
         self.save_custom_agent_btn.clicked.connect(self.on_save_custom_agent_clicked)
         btn_row.addWidget(self.save_custom_agent_btn)
@@ -4775,7 +5314,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         l.addLayout(btn_row)
 
         stat_row = QtWidgets.QHBoxLayout()
-        self.fetch_status_lbl = QtWidgets.QLabel("Status: Belum diambil (klik 'Fetch Models' atau isi Base URL & API Key)")
+        self.fetch_status_lbl = QtWidgets.QLabel(McpDashboardState.t("fetch_status_initial"))
         self.fetch_status_lbl.setStyleSheet("color: #94A3B8; font-size: 11px;")
         stat_row.addWidget(self.fetch_status_lbl)
 
@@ -4835,7 +5374,8 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         cache_key = f"{prov}:{url.strip().rstrip('/')}"
         if hasattr(state_cls, "_models_cache") and cache_key in state_cls._models_cache:
             cached = state_cls._models_cache[cache_key]
-            self._apply_fetched_models(True, cached.get("models", []), "Memuat dari cache lokal")
+            msg = "Memuat dari cache lokal" if McpDashboardState.get_language() == "id" else "Loaded from local cache"
+            self._apply_fetched_models(True, cached.get("models", []), msg)
 
     def on_provider_selected(self, idx):
         if not self.provider_combo or not self.base_url_input:
@@ -4855,9 +5395,10 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             if self.model_combo:
                 self.model_combo.clear()
             if self.models_count_lbl:
-                self.models_count_lbl.setText("(0 models)")
+                self.models_count_lbl.setText(McpDashboardState.t("models_count", count=0))
             if self.fetch_status_lbl:
-                self.fetch_status_lbl.setText("Provider diganti. Klik 'Fetch Models' atau tunggu auto-fetch.")
+                msg = "Penyedia diganti. Klik 'Ambil Model' atau tunggu pengambilan otomatis." if McpDashboardState.get_language() == "id" else "Provider changed. Click 'Fetch Models' or wait for auto-fetch."
+                self.fetch_status_lbl.setText(msg)
                 self.fetch_status_lbl.setStyleSheet("color: #94A3B8; font-size: 11px;")
 
     def on_toggle_api_key_visibility(self):
@@ -4866,10 +5407,10 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         self._active_key_visible = not self._active_key_visible
         if self._active_key_visible:
             self.api_key_input.setEchoMode(QtWidgets.QLineEdit.Normal)
-            self.toggle_key_btn.setText("🙈 Hide")
+            self.toggle_key_btn.setText(McpDashboardState.t("hide_key"))
         else:
             self.api_key_input.setEchoMode(QtWidgets.QLineEdit.Password)
-            self.toggle_key_btn.setText("👁 Show")
+            self.toggle_key_btn.setText(McpDashboardState.t("show_key"))
 
     def on_custom_input_debounced(self):
         if not QtCore:
@@ -4899,15 +5440,18 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         url = self.base_url_input.text().strip()
         key = self.api_key_input.text().strip() if self.api_key_input else ""
         prov = self.provider_combo.currentText().strip() if self.provider_combo else "OpenAI"
+        lang = McpDashboardState.get_language()
 
         if not url:
             if not auto:
-                self.set_custom_agent_status("Base URL tidak boleh kosong", False)
+                msg = "URL Basis tidak boleh kosong" if lang == "id" else "Base URL cannot be empty"
+                self.set_custom_agent_status(msg, False)
             return
 
         if not key and prov.lower() != "ollama":
             if not auto:
-                self.set_custom_agent_status("API Key wajib diisi untuk mengambil model", False)
+                msg = "Kunci API wajib diisi untuk mengambil model" if lang == "id" else "API Key is required to fetch models"
+                self.set_custom_agent_status(msg, False)
             return
 
         self._fetch_seq += 1
@@ -4915,10 +5459,10 @@ class McpDashboardTab(ida_kernwin.PluginForm):
 
         if self.fetch_models_btn:
             self.fetch_models_btn.setEnabled(False)
-            self.fetch_models_btn.setText("Fetching...")
+            self.fetch_models_btn.setText(McpDashboardState.t("fetching_models"))
 
         if self.fetch_status_lbl:
-            self.fetch_status_lbl.setText("Mengambil daftar model dari provider...")
+            self.fetch_status_lbl.setText(McpDashboardState.t("fetch_status_fetching"))
             self.fetch_status_lbl.setStyleSheet("color: #FBBF24; font-size: 11px;")
 
         res_holder = []
@@ -4949,7 +5493,8 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                 elif time.time() - t_start > 12.0:
                     poll_timer.stop()
                     poll_timer.deleteLater()
-                    self._apply_fetched_models(False, [], "Permintaan fetch model timeout setelah 12s")
+                    timeout_msg = "Permintaan ambil model timeout setelah 12s" if lang == "id" else "Model fetch request timed out after 12s"
+                    self._apply_fetched_models(False, [], timeout_msg)
             poll_timer.timeout.connect(_poll)
             poll_timer.start(40)
         else:
@@ -4957,13 +5502,15 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             if res_holder:
                 self._apply_fetched_models(res_holder[0][0], res_holder[0][1], res_holder[0][2])
             else:
-                self._apply_fetched_models(False, [], "Fetch selesai tanpa respons")
+                empty_resp = "Pengambilan selesai tanpa respons" if lang == "id" else "Fetch completed without response"
+                self._apply_fetched_models(False, [], empty_resp)
 
     def _apply_fetched_models(self, ok, models, msg):
         if self.fetch_models_btn:
             self.fetch_models_btn.setEnabled(True)
-            self.fetch_models_btn.setText("Refresh Models")
+            self.fetch_models_btn.setText(McpDashboardState.t("refresh_models"))
         now_str = datetime.datetime.now().strftime("%H:%M:%S")
+        lang = McpDashboardState.get_language()
 
         if ok and models:
             prev_selected = self.model_combo.currentText().strip() if self.model_combo else ""
@@ -4982,16 +5529,17 @@ class McpDashboardTab(ida_kernwin.PluginForm):
 
             if not found_prev and prev_selected:
                 self.model_combo.setEditText(prev_selected)
-                self.set_custom_agent_status(f"Peringatan: Model tersimpan '{prev_selected}' tidak ditemukan di provider. Silakan pilih dari dropdown.", False)
+                warn_msg = f"Peringatan: Model tersimpan '{prev_selected}' tidak ditemukan di penyedia. Silakan pilih dari dropdown." if lang == "id" else f"Warning: Saved model '{prev_selected}' not found on provider. Select from dropdown."
+                self.set_custom_agent_status(warn_msg, False)
             elif models and not prev_selected:
                 self.model_combo.setCurrentIndex(0)
 
             self.model_combo.blockSignals(False)
 
             if self.models_count_lbl:
-                self.models_count_lbl.setText(f"({len(models)} models)")
+                self.models_count_lbl.setText(McpDashboardState.t("models_count", count=len(models)))
             if self.fetch_status_lbl:
-                self.fetch_status_lbl.setText(f"Fetch berhasil: {len(models)} model dimuat pada {now_str}")
+                self.fetch_status_lbl.setText(McpDashboardState.t("fetch_status_success", count=len(models), time=now_str))
                 self.fetch_status_lbl.setStyleSheet("color: #34D399; font-size: 11px; font-weight: 600;")
             self.update_model_metadata_view()
 
@@ -4999,13 +5547,13 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             if self.model_combo:
                 self.model_combo.clear()
             if self.models_count_lbl:
-                self.models_count_lbl.setText("(0 models)")
+                self.models_count_lbl.setText(McpDashboardState.t("models_count", count=0))
             if self.fetch_status_lbl:
-                self.fetch_status_lbl.setText(f"Empty state: Provider mengembalikan daftar kosong pada {now_str}")
+                self.fetch_status_lbl.setText(McpDashboardState.t("fetch_status_empty", time=now_str))
                 self.fetch_status_lbl.setStyleSheet("color: #FBBF24; font-size: 11px;")
         else:
             if self.fetch_status_lbl:
-                self.fetch_status_lbl.setText(f"Gagal mengambil model ({now_str}): {msg}")
+                self.fetch_status_lbl.setText(McpDashboardState.t("fetch_status_failed", time=now_str, msg=msg))
                 self.fetch_status_lbl.setStyleSheet("color: #FB7185; font-size: 11px; font-weight: 600;")
             self.set_custom_agent_status(msg, False)
 
@@ -5045,15 +5593,18 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         prov = self.provider_combo.currentText().strip() if self.provider_combo else "OpenAI"
         url = self.base_url_input.text().strip()
         key = self.api_key_input.text().strip() if self.api_key_input else ""
+        lang = McpDashboardState.get_language()
 
         if not url:
-            self.set_custom_agent_status("Base URL tidak boleh kosong", False)
+            msg = "URL Basis tidak boleh kosong" if lang == "id" else "Base URL cannot be empty"
+            self.set_custom_agent_status(msg, False)
             return
 
         if self.test_provider_conn_btn:
             self.test_provider_conn_btn.setEnabled(False)
-            self.test_provider_conn_btn.setText("Testing...")
-        self.set_custom_agent_status(f"Menguji koneksi ke {url}...", True)
+            self.test_provider_conn_btn.setText(McpDashboardState.t("testing_connection"))
+        test_msg = f"Menguji koneksi ke {url}..." if lang == "id" else f"Testing connection to {url}..."
+        self.set_custom_agent_status(test_msg, True)
 
         res_holder = []
         def _worker():
@@ -5077,26 +5628,28 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                     ok, msg = res_holder[0]
                     if self.test_provider_conn_btn:
                         self.test_provider_conn_btn.setEnabled(True)
-                        self.test_provider_conn_btn.setText("Test Connection")
+                        self.test_provider_conn_btn.setText(McpDashboardState.t("test_connection"))
                     self.set_custom_agent_status(msg, ok)
                 elif time.time() - t_start > 12.0:
                     poll_timer.stop()
                     poll_timer.deleteLater()
                     if self.test_provider_conn_btn:
                         self.test_provider_conn_btn.setEnabled(True)
-                        self.test_provider_conn_btn.setText("Test Connection")
-                    self.set_custom_agent_status("Connection test timed out after 12s", False)
+                        self.test_provider_conn_btn.setText(McpDashboardState.t("test_connection"))
+                    t_out = "Uji koneksi timeout setelah 12s" if lang == "id" else "Connection test timed out after 12s"
+                    self.set_custom_agent_status(t_out, False)
             poll_timer.timeout.connect(_poll)
             poll_timer.start(40)
         else:
             th.join(timeout=3)
             if self.test_provider_conn_btn:
                 self.test_provider_conn_btn.setEnabled(True)
-                self.test_provider_conn_btn.setText("Test Connection")
+                self.test_provider_conn_btn.setText(McpDashboardState.t("test_connection"))
             if res_holder:
                 self.set_custom_agent_status(res_holder[0][1], res_holder[0][0])
             else:
-                self.set_custom_agent_status("Test selesai tanpa hasil", False)
+                done_msg = "Uji selesai tanpa hasil" if lang == "id" else "Test finished without result"
+                self.set_custom_agent_status(done_msg, False)
 
     def on_test_selected_model_clicked(self):
         if not self.base_url_input or not self.model_combo:
@@ -5105,15 +5658,18 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         url = self.base_url_input.text().strip()
         key = self.api_key_input.text().strip() if self.api_key_input else ""
         model = self.model_combo.currentText().strip()
+        lang = McpDashboardState.get_language()
 
         if not model:
-            self.set_custom_agent_status("Pilih atau ketik Model ID terlebih dahulu untuk diuji", False)
+            msg = "Pilih atau ketik ID Model terlebih dahulu untuk diuji" if lang == "id" else "Select or type a Model ID first to test"
+            self.set_custom_agent_status(msg, False)
             return
 
         if self.test_model_btn:
             self.test_model_btn.setEnabled(False)
-            self.test_model_btn.setText("Testing Model...")
-        self.set_custom_agent_status(f"Mengirim test inference untuk model '{model}'...", True)
+            self.test_model_btn.setText(McpDashboardState.t("testing_model"))
+        init_msg = f"Mengirim inferensi uji untuk model '{model}'..." if lang == "id" else f"Sending test inference for model '{model}'..."
+        self.set_custom_agent_status(init_msg, True)
 
         res_holder = []
         def _worker():
@@ -5137,26 +5693,28 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                     ok, msg = res_holder[0]
                     if self.test_model_btn:
                         self.test_model_btn.setEnabled(True)
-                        self.test_model_btn.setText("Test Selected Model")
+                        self.test_model_btn.setText(McpDashboardState.t("test_selected_model"))
                     self.set_custom_agent_status(msg, ok)
                 elif time.time() - t_start > 15.0:
                     poll_timer.stop()
                     poll_timer.deleteLater()
                     if self.test_model_btn:
                         self.test_model_btn.setEnabled(True)
-                        self.test_model_btn.setText("Test Selected Model")
-                    self.set_custom_agent_status("Model inference test timed out after 15s", False)
+                        self.test_model_btn.setText(McpDashboardState.t("test_selected_model"))
+                    t_out = "Uji inferensi model timeout setelah 15s" if lang == "id" else "Model inference test timed out after 15s"
+                    self.set_custom_agent_status(t_out, False)
             poll_timer.timeout.connect(_poll)
             poll_timer.start(40)
         else:
             th.join(timeout=3)
             if self.test_model_btn:
                 self.test_model_btn.setEnabled(True)
-                self.test_model_btn.setText("Test Selected Model")
+                self.test_model_btn.setText(McpDashboardState.t("test_selected_model"))
             if res_holder:
                 self.set_custom_agent_status(res_holder[0][1], res_holder[0][0])
             else:
-                self.set_custom_agent_status("Inference test selesai tanpa hasil", False)
+                done_msg = "Uji inferensi selesai tanpa hasil" if lang == "id" else "Inference test completed without result"
+                self.set_custom_agent_status(done_msg, False)
 
     def on_save_custom_agent_clicked(self):
         if not self.base_url_input or not self.model_combo:
@@ -5165,17 +5723,21 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         url = self.base_url_input.text().strip()
         key = self.api_key_input.text().strip() if self.api_key_input else ""
         model = self.model_combo.currentText().strip()
+        lang = McpDashboardState.get_language()
 
         if not url:
-            self.set_custom_agent_status("Base URL tidak boleh kosong", False)
+            msg = "URL Basis tidak boleh kosong" if lang == "id" else "Base URL cannot be empty"
+            self.set_custom_agent_status(msg, False)
             return
 
         state_cls = globals().get("McpDashboardState") or getattr(sys.modules.get(__name__), "McpDashboardState", None)
         if state_cls and hasattr(state_cls, "save_custom_agent_config"):
             state_cls.save_custom_agent_config(prov, url, key, model)
-            self.set_custom_agent_status(f"Konfigurasi {prov} berhasil disimpan! Model: {model}", True)
+            msg = f"Konfigurasi {prov} berhasil disimpan! Model: {model}" if lang == "id" else f"Configuration for {prov} saved! Model: {model}"
+            self.set_custom_agent_status(msg, True)
         else:
-            self.set_custom_agent_status("Konfigurasi tersimpan lokal", True)
+            msg = "Konfigurasi tersimpan lokal" if lang == "id" else "Configuration saved locally"
+            self.set_custom_agent_status(msg, True)
 
         if self.copilot_agent_badge:
             self.copilot_agent_badge.setText(f"Provider: {prov}")
@@ -5223,68 +5785,133 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         if not self.agent_desc_box:
             return
 
-        if agent_key == "Antigravity":
-            text = (
-                "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Antigravity Agent (Google DeepMind)</div>"
-                "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
-                "• MCP Client Configuration: <span style='font-family: monospace; color: #38BDF8;'>c:\\Users\\user\\Documents\\project\\ida-mcp.json</span><br/>"
-                "• Antigravity terhubung langsung ke IDA Pro melalui endpoint: <span style='font-family: monospace; color: #34D399;'>http://127.0.0.1:13337/mcp</span><br/>"
-                "• Klik <b>'Copy Agent Config'</b> untuk menyalin JSON konfigurasi server Antigravity.<br/>"
-                "• Konteks analisis disinkronkan otomatis ke <span style='font-family: monospace; color: #38BDF8;'>ida_agent_context.json</span> & <span style='font-family: monospace; color: #38BDF8;'>ida_current_function.c</span>."
-                "</div>"
-            )
-            self.copy_agent_cfg_btn.setVisible(True)
-            self.run_local_agent_btn.setVisible(False)
-            self.save_agent_cfg_btn.setVisible(True)
-        elif agent_key == "Claude":
-            text = (
-                "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Claude Desktop / Claude Code (Anthropic)</div>"
-                "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
-                "• Tambahkan blok konfigurasi ini ke <span style='font-family: monospace; color: #38BDF8;'>%APPDATA%\\Claude\\claude_desktop_config.json</span>:<br/>"
-                "<pre style='background: #11151D; border: 1px solid #283142; border-radius: 4px; padding: 6px; color: #34D399; font-size: 11px;'>"
-                '{\n  "mcpServers": {\n    "ida-pro": {\n      "command": "C:\\\\Python314\\\\python.exe",\n'
-                '      "args": ["C:\\\\Users\\\\user\\\\AppData\\\\Roaming\\\\Python\\\\Python314\\\\site-packages\\\\ida_pro_mcp\\\\server.py", "--ida-rpc", "http://127.0.0.1:13337"]\n'
-                '    }\n  }\n}'
-                "</pre>"
-                "</div>"
-            )
-            self.copy_agent_cfg_btn.setVisible(True)
-            self.run_local_agent_btn.setVisible(False)
-            self.save_agent_cfg_btn.setVisible(True)
-        elif agent_key == "Cursor":
-            text = (
-                "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Cursor IDE / Windsurf (AI Code Editor)</div>"
-                "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
-                "• Tambahkan konfigurasi ke <span style='font-family: monospace; color: #38BDF8;'>.cursor/mcp.json</span> di workspace root Anda:<br/>"
-                "<pre style='background: #11151D; border: 1px solid #283142; border-radius: 4px; padding: 6px; color: #34D399; font-size: 11px;'>"
-                '{\n  "mcpServers": {\n    "ida-pro": {\n      "command": "python",\n'
-                '      "args": ["-m", "ida_pro_mcp.server", "--ida-rpc", "http://127.0.0.1:13337"]\n'
-                '    }\n  }\n}'
-                "</pre>"
-                "</div>"
-            )
-            self.copy_agent_cfg_btn.setVisible(True)
-            self.run_local_agent_btn.setVisible(False)
-            self.save_agent_cfg_btn.setVisible(True)
-        elif agent_key == "Local_Script":
-            text = (
-                "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Autonomous Script (ida_mcp_agent)</div>"
-                "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
-                "• Script Runner: <span style='font-family: monospace; color: #38BDF8;'>c:\\Users\\user\\Documents\\project\\ida_mcp_agent\\agent_runner.py</span><br/>"
-                "• Menyelesaikan pointer, memetakan xrefs, dan menambahkan anotasi ke database IDA Pro secara otomatis.<br/>"
-                "• Klik <b>'Run ida_mcp_agent'</b> untuk memicu analisis otomatis pada fungsi aktif."
-                "</div>"
-            )
-            self.copy_agent_cfg_btn.setVisible(False)
-            self.run_local_agent_btn.setVisible(True)
-            self.save_agent_cfg_btn.setVisible(True)
+        lang = McpDashboardState.get_language()
+        if lang == "id":
+            if agent_key == "Antigravity":
+                text = (
+                    "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Agen Antigravity (Google DeepMind)</div>"
+                    "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
+                    "• Konfigurasi Klien MCP: <span style='font-family: monospace; color: #38BDF8;'>c:\\Users\\user\\Documents\\project\\ida-mcp.json</span><br/>"
+                    "• Antigravity terhubung langsung ke IDA Pro melalui endpoint: <span style='font-family: monospace; color: #34D399;'>http://127.0.0.1:13337/mcp</span><br/>"
+                    "• Klik <b>'Salin Konfigurasi Agen'</b> untuk menyalin konfigurasi JSON server Antigravity.<br/>"
+                    "• Konteks analisis disinkronkan otomatis ke <span style='font-family: monospace; color: #38BDF8;'>ida_agent_context.json</span> & <span style='font-family: monospace; color: #38BDF8;'>ida_current_function.c</span>."
+                    "</div>"
+                )
+                self.copy_agent_cfg_btn.setVisible(True)
+                self.run_local_agent_btn.setVisible(False)
+                self.save_agent_cfg_btn.setVisible(True)
+            elif agent_key == "Claude":
+                text = (
+                    "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Claude Desktop / Claude Code (Anthropic)</div>"
+                    "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
+                    "• Tambahkan blok konfigurasi ini ke <span style='font-family: monospace; color: #38BDF8;'>%APPDATA%\\Claude\\claude_desktop_config.json</span>:<br/>"
+                    "<pre style='background: #11151D; border: 1px solid #283142; border-radius: 4px; padding: 6px; color: #34D399; font-size: 11px;'>"
+                    '{\\n  "mcpServers": {\\n    "ida-pro": {\\n      "command": "C:\\\\Python314\\\\python.exe",\\n'
+                    '      "args": ["C:\\\\Users\\\\user\\\\AppData\\\\Roaming\\\\Python\\\\Python314\\\\site-packages\\\\ida_pro_mcp\\\\server.py", "--ida-rpc", "http://127.0.0.1:13337"]\\n'
+                    '    }\\n  }\\n}'
+                    "</pre>"
+                    "</div>"
+                )
+                self.copy_agent_cfg_btn.setVisible(True)
+                self.run_local_agent_btn.setVisible(False)
+                self.save_agent_cfg_btn.setVisible(True)
+            elif agent_key == "Cursor":
+                text = (
+                    "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Cursor IDE / Windsurf (Editor Kode AI)</div>"
+                    "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
+                    "• Tambahkan konfigurasi ke <span style='font-family: monospace; color: #38BDF8;'>.cursor/mcp.json</span> di direktori utama ruang kerja Anda:<br/>"
+                    "<pre style='background: #11151D; border: 1px solid #283142; border-radius: 4px; padding: 6px; color: #34D399; font-size: 11px;'>"
+                    '{\\n  "mcpServers": {\\n    "ida-pro": {\\n      "command": "python",\\n'
+                    '      "args": ["-m", "ida_pro_mcp.server", "--ida-rpc", "http://127.0.0.1:13337"]\\n'
+                    '    }\\n  }\\n}'
+                    "</pre>"
+                    "</div>"
+                )
+                self.copy_agent_cfg_btn.setVisible(True)
+                self.run_local_agent_btn.setVisible(False)
+                self.save_agent_cfg_btn.setVisible(True)
+            elif agent_key == "Local_Script":
+                text = (
+                    "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Skrip Otonom (ida_mcp_agent)</div>"
+                    "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
+                    "• Eksekutor Skrip: <span style='font-family: monospace; color: #38BDF8;'>c:\\Users\\user\\Documents\\project\\ida_mcp_agent\\agent_runner.py</span><br/>"
+                    "• Menyelesaikan pointer, memetakan referensi silang, dan menambahkan anotasi ke database IDA Pro secara otomatis.<br/>"
+                    "• Klik <b>'Jalankan ida_mcp_agent'</b> untuk memicu analisis otomatis pada fungsi aktif."
+                    "</div>"
+                )
+                self.copy_agent_cfg_btn.setVisible(False)
+                self.run_local_agent_btn.setVisible(True)
+                self.save_agent_cfg_btn.setVisible(True)
+            else:
+                name = info.get('name', 'Agen Kustom')
+                desc = info.get('desc', '')
+                text = f"<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>{name}</div><div style='margin-top: 4px;'>{desc}</div>"
+                self.copy_agent_cfg_btn.setVisible(False)
+                self.run_local_agent_btn.setVisible(False)
+                self.save_agent_cfg_btn.setVisible(True)
         else:
-            name = info.get('name', 'Custom Agent')
-            desc = info.get('desc', '')
-            text = f"<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>{name}</div><div style='margin-top: 4px;'>{desc}</div>"
-            self.copy_agent_cfg_btn.setVisible(False)
-            self.run_local_agent_btn.setVisible(False)
-            self.save_agent_cfg_btn.setVisible(True)
+            if agent_key == "Antigravity":
+                text = (
+                    "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Antigravity Agent (Google DeepMind)</div>"
+                    "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
+                    "• MCP Client Configuration: <span style='font-family: monospace; color: #38BDF8;'>c:\\Users\\user\\Documents\\project\\ida-mcp.json</span><br/>"
+                    "• Antigravity connects directly to IDA Pro via endpoint: <span style='font-family: monospace; color: #34D399;'>http://127.0.0.1:13337/mcp</span><br/>"
+                    "• Click <b>'Copy Agent Config'</b> to copy the Antigravity server JSON configuration.<br/>"
+                    "• Analysis context is automatically synced to <span style='font-family: monospace; color: #38BDF8;'>ida_agent_context.json</span> & <span style='font-family: monospace; color: #38BDF8;'>ida_current_function.c</span>."
+                    "</div>"
+                )
+                self.copy_agent_cfg_btn.setVisible(True)
+                self.run_local_agent_btn.setVisible(False)
+                self.save_agent_cfg_btn.setVisible(True)
+            elif agent_key == "Claude":
+                text = (
+                    "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Claude Desktop / Claude Code (Anthropic)</div>"
+                    "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
+                    "• Add this configuration block to <span style='font-family: monospace; color: #38BDF8;'>%APPDATA%\\Claude\\claude_desktop_config.json</span>:<br/>"
+                    "<pre style='background: #11151D; border: 1px solid #283142; border-radius: 4px; padding: 6px; color: #34D399; font-size: 11px;'>"
+                    '{\\n  "mcpServers": {\\n    "ida-pro": {\\n      "command": "C:\\\\Python314\\\\python.exe",\\n'
+                    '      "args": ["C:\\\\Users\\\\user\\\\AppData\\\\Roaming\\\\Python\\\\Python314\\\\site-packages\\\\ida_pro_mcp\\\\server.py", "--ida-rpc", "http://127.0.0.1:13337"]\\n'
+                    '    }\\n  }\\n}'
+                    "</pre>"
+                    "</div>"
+                )
+                self.copy_agent_cfg_btn.setVisible(True)
+                self.run_local_agent_btn.setVisible(False)
+                self.save_agent_cfg_btn.setVisible(True)
+            elif agent_key == "Cursor":
+                text = (
+                    "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Cursor IDE / Windsurf (AI Code Editor)</div>"
+                    "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
+                    "• Add configuration to <span style='font-family: monospace; color: #38BDF8;'>.cursor/mcp.json</span> in your workspace root:<br/>"
+                    "<pre style='background: #11151D; border: 1px solid #283142; border-radius: 4px; padding: 6px; color: #34D399; font-size: 11px;'>"
+                    '{\\n  "mcpServers": {\\n    "ida-pro": {\\n      "command": "python",\\n'
+                    '      "args": ["-m", "ida_pro_mcp.server", "--ida-rpc", "http://127.0.0.1:13337"]\\n'
+                    '    }\\n  }\\n}'
+                    "</pre>"
+                    "</div>"
+                )
+                self.copy_agent_cfg_btn.setVisible(True)
+                self.run_local_agent_btn.setVisible(False)
+                self.save_agent_cfg_btn.setVisible(True)
+            elif agent_key == "Local_Script":
+                text = (
+                    "<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>Autonomous Script (ida_mcp_agent)</div>"
+                    "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
+                    "• Script Runner: <span style='font-family: monospace; color: #38BDF8;'>c:\\Users\\user\\Documents\\project\\ida_mcp_agent\\agent_runner.py</span><br/>"
+                    "• Resolves pointers, maps cross-references, and adds annotations into the IDA Pro database automatically.<br/>"
+                    "• Click <b>'Run ida_mcp_agent'</b> to trigger autonomous analysis on the active function."
+                    "</div>"
+                )
+                self.copy_agent_cfg_btn.setVisible(False)
+                self.run_local_agent_btn.setVisible(True)
+                self.save_agent_cfg_btn.setVisible(True)
+            else:
+                name = info.get('name', 'Custom Agent')
+                desc = info.get('desc', '')
+                text = f"<div style='font-size: 13px; font-weight: 700; color: #8B5CF6;'>{name}</div><div style='margin-top: 4px;'>{desc}</div>"
+                self.copy_agent_cfg_btn.setVisible(False)
+                self.run_local_agent_btn.setVisible(False)
+                self.save_agent_cfg_btn.setVisible(True)
 
         self.agent_desc_box.setHtml(text)
 
@@ -5307,7 +5934,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         if QtWidgets:
             QtWidgets.QApplication.clipboard().setText(json.dumps(cfg_snippet, indent=2))
         if self.agent_feedback_lbl:
-            self.agent_feedback_lbl.setText("JSON configuration copied to clipboard!")
+            self.agent_feedback_lbl.setText(McpDashboardState.t("agent_cfg_copied"))
             if QtCore:
                 QtCore.QTimer.singleShot(3000, lambda: self.agent_feedback_lbl.setText(""))
         if "McpDashboardState" in globals():
@@ -5318,7 +5945,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             McpDashboardState.save_agent_config()
             McpDashboardState.log_event("ui_action", "Saved agent preferences to ida_agent_config.json")
         if self.agent_feedback_lbl:
-            self.agent_feedback_lbl.setText("Agent preference saved successfully!")
+            self.agent_feedback_lbl.setText(McpDashboardState.t("agent_pref_saved"))
             if QtCore:
                 QtCore.QTimer.singleShot(3000, lambda: self.agent_feedback_lbl.setText(""))
 
@@ -5392,7 +6019,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             filtered.append(t)
 
         if self.tools_count_lbl:
-            self.tools_count_lbl.setText(f"(Showing {len(filtered)} of {len(catalog)} Methods)")
+            self.tools_count_lbl.setText(McpDashboardState.t("tools_showing_count", shown=len(filtered), total=len(catalog)))
 
         self.tools_table.setRowCount(len(filtered))
         stats = {}
@@ -5468,9 +6095,9 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                 return
 
             if self.func_title_lbl:
-                self.func_title_lbl.setText(f"Function: {func_info['name']}")
+                self.func_title_lbl.setText(McpDashboardState.t("func_title", name=func_info["name"]))
             if self.func_meta_lbl:
-                self.func_meta_lbl.setText(f"Range: {func_info['start']} - {func_info['end']} ({func_info['size']} bytes)")
+                self.func_meta_lbl.setText(McpDashboardState.t("func_range", start=func_info["start"], end=func_info["end"], size=func_info["size"]))
             
             if self.cff_badge:
                 self.cff_badge.setVisible(func_info.get("has_cff", False))
@@ -5509,8 +6136,8 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                     self.callers_list.addItem(f"{fn} ({hex(xref)})")
                     count += 1
                     xref = ida_xref.get_next_cref_to(ea, xref)
-                if hasattr(self, "callers_header"):
-                    self.callers_header.setText(f"Callers ({count} functions calling this):")
+                if hasattr(self, "callers_header") and self.callers_header:
+                    self.callers_header.setText(McpDashboardState.t("callers_header", count=count))
 
             if self.callees_list:
                 self.callees_list.clear()
@@ -5525,8 +6152,8 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                                 self.callees_list.addItem(f"{fn} ({hex(cref)})")
                                 count += 1
                             cref = ida_xref.get_next_cref_from(item, cref)
-                if hasattr(self, "callees_header"):
-                    self.callees_header.setText(f"Callees ({count} subroutines called):")
+                if hasattr(self, "callees_header") and self.callees_header:
+                    self.callees_header.setText(McpDashboardState.t("callees_header", count=count))
         except Exception:
             pass
 
@@ -5581,11 +6208,12 @@ class McpDashboardTab(ida_kernwin.PluginForm):
     def on_suggest_renames_clicked(self):
         self.on_deobfuscate_clicked()
         if self.ai_output_view:
-            self.ai_output_view.append("<br/><div style='background: #171D28; border: 1px solid #8B5CF6; padding: 8px; border-radius: 6px; color: #38BDF8;'>Click <b>'Apply Renames to IDA'</b> to apply proposed variable renames directly in Hex-Rays pseudocode.</div>")
+            notice = McpDashboardState.t("click_apply_renames")
+            self.ai_output_view.append(f"<br/><div style='background: #171D28; border: 1px solid #8B5CF6; padding: 8px; border-radius: 6px; color: #38BDF8;'>{notice}</div>")
 
     def on_apply_renames_clicked(self):
         ok = False
-        msg = "No renames to apply"
+        msg = McpDashboardState.t("no_renames")
         if "McpDashboardState" in globals():
             ok, msg = McpDashboardState.apply_renames_to_ida()
         if self.ai_output_view:
@@ -5619,7 +6247,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         if func_info and func_info.get("pseudocode") and QtWidgets:
             QtWidgets.QApplication.clipboard().setText(func_info["pseudocode"])
             if hasattr(self, "c_status_lbl") and self.c_status_lbl:
-                self.c_status_lbl.setText("Pseudocode copied to clipboard!")
+                self.c_status_lbl.setText(McpDashboardState.t("c_copied"))
                 if QtCore:
                     QtCore.QTimer.singleShot(3000, lambda: self.c_status_lbl.setText(""))
             if "McpDashboardState" in globals():
@@ -5636,9 +6264,9 @@ class McpDashboardTab(ida_kernwin.PluginForm):
             if "McpDashboardState" in globals():
                 McpDashboardState.log_event("ui_action", f"Exported function '{name}' for {active_agent} to clipboard")
             if self.ai_output_view:
-                self.ai_output_view.append(f"<div style='color: #34D399; font-weight: 600;'>Function '{name}' exported & copied to clipboard for {active_agent}!</div>")
+                self.ai_output_view.append(f"<div style='color: #34D399; font-weight: 600;'>{McpDashboardState.t('c_saved', name=name)}</div>")
             if hasattr(self, "c_status_lbl") and self.c_status_lbl:
-                self.c_status_lbl.setText(f"Saved & Exported '{name}'!")
+                self.c_status_lbl.setText(McpDashboardState.t("c_saved", name=name))
                 if QtCore:
                     QtCore.QTimer.singleShot(3000, lambda: self.c_status_lbl.setText(""))
         else:
@@ -5685,18 +6313,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         else:
             QtCore.QMetaObject.invokeMethod(self.log_text, "append", QtCore.Qt.QueuedConnection, QtCore.Q_ARG(str, line))
 
-
 ReaAgentTab = McpDashboardTab
-
-
-# ==============================================================================
-# UI Hooks & Action Registration
-# ==============================================================================
-import ida_idp
-import ida_kernwin
-
-_IDB_Hooks_Base = getattr(ida_idp, "IDB_Hooks", getattr(idaapi, "IDB_Hooks", object))
-_UI_Hooks_Base = getattr(ida_kernwin, "UI_Hooks", getattr(idaapi, "UI_Hooks", object))
 
 class McpUIHooks(_UI_Hooks_Base):
     def ready_to_run(self):
@@ -5710,7 +6327,6 @@ class McpUIHooks(_UI_Hooks_Base):
         McpDashboardState.on_ea_changed(cur_ea)
 
 ReaUIHooks = McpUIHooks
-
 
 def show_mcp_dashboard():
     def _do():
@@ -5729,7 +6345,6 @@ def show_mcp_dashboard():
 
 show_rea_tab = show_mcp_dashboard
 
-
 class OpenMcpActionHandler(ida_kernwin.action_handler_t):
     def __init__(self):
         super().__init__()
@@ -5742,7 +6357,6 @@ class OpenMcpActionHandler(ida_kernwin.action_handler_t):
         return ida_kernwin.AST_ENABLE_ALWAYS
 
 OpenReaActionHandler = OpenMcpActionHandler
-
 
 def register_mcp_actions():
     try:
@@ -5761,7 +6375,6 @@ def register_mcp_actions():
         pass
 
 register_rea_action = register_mcp_actions
-
 
 class MCP(idaapi.plugin_t):
     flags = idaapi.PLUGIN_KEEP | 0x0040

@@ -10,6 +10,7 @@ Bridge integrasi Model Context Protocol (MCP) untuk menghubungkan AI Coding & Re
   - Endpoint HTTP JSON-RPC 2.0 di `http://127.0.0.1:13337/mcp`
   - Mendukung 48+ fungsi analisis (dekompilasi Hex-Rays, disassembly, cross-references, tipe data struct, renaming symbol, memory read/write)
   - Dilengkapi antarmuka grafis (Qt Dashboard) di dalam IDA Pro untuk memantau status agen dan telemetri RPC secara real-time
+  - **Dukungan Dua Bahasa Murni (Bilingual UI)**: Pilihan bahasa **Bahasa Indonesia** atau **English** secara langsung melalui selector dropdown pada header bar tanpa mencampur bahasa
 - **ReClass.NET MCP Server (`reclass_mcp_server.py`)**
   - Bridge TCP socket di port `127.0.0.1:27015`
   - Memungkinkan AI Agent membaca memori proses target, membedah struktur class/struct, dan memanipulasi node data secara dinamis

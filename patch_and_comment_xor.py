@@ -24,7 +24,7 @@ import ida_funcs
 import ida_kernwin
 import idautils
 
-# Try importing Qt
+                  
 HAS_QT = False
 try:
     from PyQt5 import QtCore, QtGui, QtWidgets
@@ -40,11 +40,11 @@ except ImportError:
         except ImportError:
             HAS_QT = False
 
-# ARM64 NOP instruction (little-endian: 0xd503201f)
+                                                   
 ARM64_NOP = b"\x1f\x20\x03\xd5"
 SUB_2E34C4_EA = 0x2E34C4
 
-# Keywords dictionary for heuristic key scoring
+                                               
 COMMON_KEYWORDS = [
     "vk", "gl", "egl", "mono", "unity", "script", "lib", "android",
     "create", "destroy", "get", "set", "device", "image", "buffer",
@@ -81,28 +81,28 @@ def auto_detect_xor_key(raw_input):
         score = 0
         score += int((printable / len(dec)) * 40)
         
-        # Alphanumeric ratio
+                            
         alphanumeric = sum(1 for c in s if c.isalnum() or c in "_/.- :%?=&()[]")
         score += int((alphanumeric / len(dec)) * 30)
         
-        # Vowels
+                
         vowels = sum(1 for c in s.lower() if c in "aeiou")
         if len(s) >= 4:
             v_ratio = vowels / len(s)
             if 0.15 <= v_ratio <= 0.60:
                 score += 20
                 
-        # Keyword matches
+                         
         s_lower = s.lower()
         for kw in COMMON_KEYWORDS:
             if kw in s_lower:
                 score += 30
                 
-        # Prefer mixed case or camelCase over all-uppercase
+                                                           
         if s.isupper() and len(s) > 4:
             score -= 15
             
-        # Penalize strange punctuation
+                                      
         weird = sum(1 for c in s if c in "~`^{}|<>\\")
         score -= weird * 5
         
@@ -120,34 +120,34 @@ def auto_detect_xor_key(raw_input):
 
 def decode_arm64_instruction(inst):
     """Decode basic ARM64 instructions relevant to call argument tracing"""
-    # MOVZ Wd/Xd, #imm, LSL #hw
+                               
     if (inst & 0x7F800000) == 0x52800000:
         rd = inst & 0x1F
         imm = (inst >> 5) & 0xFFFF
         hw = (inst >> 21) & 3
         return ('MOVZ', rd, imm << (hw * 16))
-    # MOVN Wd/Xd, #imm
+                      
     if (inst & 0x7F800000) == 0x12800000:
         rd = inst & 0x1F
         imm = (inst >> 5) & 0xFFFF
         hw = (inst >> 21) & 3
         return ('MOVN', rd, ~(imm << (hw * 16)) & 0xFFFFFFFF)
-    # ORR Wd, WZR, #imm (0x32000000)
+                                    
     if (inst & 0xFF800000) == 0x32000000:
         rd = inst & 0x1F
         imm = (inst >> 10) & 0x3F
         return ('ORR', rd, imm)
-    # MOV Wd, Wm (0x2A0003E0)
+                             
     if (inst & 0xFFE0FFE0) == 0x2A0003E0:
         rd = inst & 0x1F
         rm = (inst >> 16) & 0x1F
         return ('MOV_REG', rd, rm)
-    # MOV Xd, Xm (0xAA0003E0)
+                             
     if (inst & 0xFFE0FFE0) == 0xAA0003E0:
         rd = inst & 0x1F
         rm = (inst >> 16) & 0x1F
         return ('MOV_REG', rd, rm)
-    # ADRP Xd, #imm
+                   
     if (inst & 0x9F000000) == 0x90000000:
         rd = inst & 0x1F
         immlo = (inst >> 29) & 3
@@ -155,19 +155,19 @@ def decode_arm64_instruction(inst):
         imm = (immhi << 2) | immlo
         if imm & (1 << 20): imm -= (1 << 21)
         return ('ADRP', rd, imm)
-    # ADD Xd, Xn, #imm (0x91000000)
+                                   
     if (inst & 0xFF800000) == 0x91000000:
         rd = inst & 0x1F
         rn = (inst >> 5) & 0x1F
         imm = (inst >> 10) & 0xFFF
         return ('ADD_IMM', rd, rn, imm)
-    # LDR Wt, [Xn, #pimm] (0xB9400000)
+                                      
     if (inst & 0xFFC00000) == 0xB9400000:
         rt = inst & 0x1F
         rn = (inst >> 5) & 0x1F
         imm = ((inst >> 10) & 0xFFF) << 2
         return ('LDR_W', rt, rn, imm)
-    # STR Wt, [Xn, #pimm] (0xB9000000)
+                                      
     if (inst & 0xFFC00000) == 0xB9000000:
         rt = inst & 0x1F
         rn = (inst >> 5) & 0x1F
@@ -227,9 +227,9 @@ def trace_call_arguments(xref_ea, num_insts=32):
     return key, length, buf_ea, "OK"
 
 
-# Master Pre-Cataloged Items List
+                                 
 ALL_ITEMS = [
-    # --- Unreal Engine Reflection Targets ---
+                                              
     {
         "ea": 0xA55EB,
         "type": "STRING",
@@ -276,7 +276,7 @@ ALL_ITEMS = [
         "detail": "Unreal Engine 4 Core Library"
     },
 
-    # --- Vulkan Function Pointer Resolvers in ano_init_vulkan_function_pointers (sub_382768) ---
+                                                                                                 
     {
         "ea": 0x3827D0,
         "type": "CALL_NOP",
@@ -521,7 +521,7 @@ ALL_ITEMS = [
         "detail": "qword_57CF30 = vkGetInstanceProcAddr(..., 'vkFreeMemory')"
     },
 
-    # --- Unity / Mono Engine (Key 182 / 0xB6 & Key 24 / 0x18) ---
+                                                                  
     {
         "ea": 0x2F9EA4,
         "type": "CALL_NOP",
@@ -685,7 +685,7 @@ ALL_ITEMS = [
         "detail": "Mono assembly dynamic load hook (Key: 0x18 / 24)"
     },
 
-    # --- Tencent Security / Servers ---
+                                        
     {
         "ea": 0xA591C,
         "type": "STRING",
@@ -759,7 +759,7 @@ ALL_ITEMS = [
         "detail": "Extracted signature payload"
     },
 
-    # --- Android System & Anti-Cheat Inspection ---
+                                                    
     {
         "ea": 0x9F228,
         "type": "STRING",
@@ -917,7 +917,7 @@ def apply_all_patches():
         except Exception as e:
             item["status"] = f"ERR: {e}"
     
-    # Refresh views
+                   
     try:
         ida_kernwin.request_refresh(ida_kernwin.IWID_DISASMS)
         ida_kernwin.request_refresh(ida_kernwin.IWID_STRINGS)
@@ -947,10 +947,10 @@ def scan_all_calls_in_idb(auto_patch=True):
     
     ida_kernwin.msg("\n[+] Starting Universal Full-Binary Scan for all calls to sub_2E34C4...\n")
     
-    # Collect all call xrefs to sub_2E34C4
+                                          
     call_xrefs = []
     for xref in idautils.XrefsTo(SUB_2E34C4_EA):
-        # Code reference
+                        
         if xref.type in (idaapi.fl_CF, idaapi.fl_CN, idaapi.fl_JF, idaapi.fl_JN) or xref.iscode:
             if xref.frm != SUB_2E34C4_EA and xref.frm != (SUB_2E34C4_EA - 4):
                 call_xrefs.append(xref.frm)
@@ -961,18 +961,18 @@ def scan_all_calls_in_idb(auto_patch=True):
     for xref_ea in call_xrefs:
         key, length, buf_ea, status = trace_call_arguments(xref_ea, num_insts=36)
         
-        # Check if already cataloged
+                                    
         is_known = xref_ea in known_eas
         
         enc_str = "BL sub_2E34C4"
         dec_str = "Auto-Reassembled (NOP)"
         cat = "Universal Call Scanner"
         
-        # If buf_ea is a valid memory address and length is reasonable
+                                                                      
         if buf_ea and 0 < (length or 0) <= 256:
             raw_bytes = ida_bytes.get_bytes(buf_ea, length)
             if raw_bytes:
-                # If key was detected from W2
+                                             
                 if key is not None:
                     try:
                         dec_bytes = bytes(b ^ key for b in raw_bytes)
@@ -981,7 +981,7 @@ def scan_all_calls_in_idb(auto_patch=True):
                     except:
                         pass
                 else:
-                    # Run 256-key auto brute-force detector!
+                                                            
                     cands = auto_detect_xor_key(raw_bytes)
                     if cands:
                         best = cands[0]
@@ -991,7 +991,7 @@ def scan_all_calls_in_idb(auto_patch=True):
                         cat = f"Auto-Detected Key ({best['hex_key']})"
         
         if key is None:
-            # Fallback to key 24 (0x18) if widespread standard
+                                                              
             key = 24
             
         item_entry = {
@@ -1034,7 +1034,7 @@ if HAS_QT:
             layout.setSpacing(10)
             self.parent.setLayout(layout)
 
-            # --- Header Card ---
+                                 
             header_box = QtWidgets.QFrame()
             header_box.setStyleSheet("""
                 QFrame {
@@ -1058,7 +1058,7 @@ if HAS_QT:
 
             h_layout.addStretch()
 
-            # Status pill
+                         
             self.pill = QtWidgets.QLabel(f"● {len(ALL_ITEMS)} Items Managed")
             self.pill.setStyleSheet("""
                 background-color: rgba(16, 185, 129, 0.2);
@@ -1071,7 +1071,7 @@ if HAS_QT:
             h_layout.addWidget(self.pill)
             layout.addWidget(header_box)
 
-            # --- Auto-Key Brute-Forcer Toolbar ---
+                                                   
             autokey_box = QtWidgets.QGroupBox("Universal Auto-Key Brute-Forcer (Test Any String / Key 0..255)")
             autokey_box.setStyleSheet("""
                 QGroupBox {
@@ -1117,10 +1117,10 @@ if HAS_QT:
 
             layout.addWidget(autokey_box)
 
-            # --- Search & Actions Toolbar ---
+                                              
             toolbar = QtWidgets.QHBoxLayout()
             
-            # Big scan button
+                             
             btn_scan_all = QtWidgets.QPushButton("⚡ Auto-Scan Entire Binary (All Keys 0x00-0xFF)")
             btn_scan_all.setStyleSheet("background-color: #8B5CF6; color: white; padding: 6px 14px; border-radius: 6px; font-weight: bold;")
             btn_scan_all.clicked.connect(self.run_full_binary_scan)
@@ -1144,7 +1144,7 @@ if HAS_QT:
             toolbar.addWidget(search_lbl)
             toolbar.addWidget(self.search_input, stretch=2)
 
-            # Category filter
+                             
             self.cat_filter = QtWidgets.QComboBox()
             self.cat_filter.addItems(["All Categories", "Vulkan Init (sub_382768)", "Unreal Engine Reflection", "Unity / Mono", "Android System", "Tencent Security", "Universal Call Scanner"])
             self.cat_filter.setStyleSheet("background-color: #1E293B; color: #E2E8F0; padding: 5px; border-radius: 4px;")
@@ -1168,7 +1168,7 @@ if HAS_QT:
 
             layout.addLayout(toolbar)
 
-            # --- Main Table ---
+                                
             self.table = QtWidgets.QTableWidget()
             self.table.setColumnCount(7)
             self.table.setHorizontalHeaderLabels(["Address", "Type", "Key", "Encrypted (Original)", "Decrypted (Reassembled)", "Category", "Status"])
@@ -1252,7 +1252,7 @@ if HAS_QT:
                 key_item = QtWidgets.QTableWidgetItem(key_str)
                 key_item.setTextAlignment(QtCore.Qt.AlignCenter)
                 if k_val == 182:
-                    key_item.setForeground(QtGui.QBrush(QtGui.QColor("#EC4899"))) # Pink for 0xB6
+                    key_item.setForeground(QtGui.QBrush(QtGui.QColor("#EC4899")))                
                 else:
                     key_item.setForeground(QtGui.QBrush(QtGui.QColor("#A78BFA")))
                 self.table.setItem(row, 2, key_item)

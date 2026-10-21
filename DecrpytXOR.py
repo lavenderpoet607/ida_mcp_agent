@@ -293,7 +293,7 @@ def settings_menu_and_run(base_address):
             import patch_and_comment_xor
             patch_and_comment_xor.show_results_in_tab()
         except ImportError:
-            # If not in path, exec directly
+                                           
             script_path = os.path.join(os.path.dirname(__file__), "patch_and_comment_xor.py")
             if os.path.exists(script_path):
                 import importlib.util
