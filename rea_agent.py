@@ -3184,6 +3184,7 @@ class McpDashboardState:
             import ida_kernwin
             import ida_funcs
             import ida_hexrays
+            import ida_lines
 
             ea = target_ea if target_ea is not None else ida_kernwin.get_screen_ea()
             func = ida_funcs.get_func(ea)
@@ -3208,7 +3209,10 @@ class McpDashboardState:
                 error = ida_hexrays.hexrays_failure_t()
                 cfunc = ida_hexrays.decompile_func(func, error, ida_hexrays.DECOMP_WARNINGS)
                 if cfunc:
-                    lines = [str(line) for line in cfunc.get_pseudocode()]
+                    lines = []
+                    for sl in cfunc.get_pseudocode():
+                        raw_str = sl.line if hasattr(sl, "line") else str(sl)
+                        lines.append(ida_lines.tag_remove(raw_str) if hasattr(ida_lines, "tag_remove") else raw_str)
                     pseudocode = "\n".join(lines)
                     label_count = len(re.findall(r"LABEL_\d+:", pseudocode))
                     goto_count = len(re.findall(r"goto\s+LABEL_\d+", pseudocode))
@@ -3222,7 +3226,9 @@ class McpDashboardState:
                     import idautils
                     lines = [f"[Disassembly for {fname} ({hex(func.start_ea)})]"]
                     for head in idautils.Heads(func.start_ea, min(func.start_ea + 128, func.end_ea)):
-                        lines.append(f"{hex(head)}: {idaapi.generate_disasm_line(head, 0)}")
+                        raw_d = ida_lines.generate_disasm_line(head, 0) if hasattr(ida_lines, "generate_disasm_line") else idaapi.generate_disasm_line(head, 0)
+                        clean_d = ida_lines.tag_remove(raw_d) if (raw_d and hasattr(ida_lines, "tag_remove")) else str(raw_d)
+                        lines.append(f"{hex(head)}: {clean_d}")
                     if func.end_ea - func.start_ea > 128:
                         lines.append("  ... [truncated for preview]")
                     pseudocode = "\n".join(lines)
