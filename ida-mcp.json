@@ -1,0 +1,8 @@
+{
+  "command": "C:\\Python314\\python.exe",
+  "args": [
+    "C:\\Users\\user\\AppData\\Roaming\\Python\\Python314\\site-packages\\ida_pro_mcp\\server.py",
+    "--ida-rpc",
+    "http://127.0.0.1:13337"
+  ]
+}

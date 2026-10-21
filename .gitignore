@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+*.tmp
+*.bak
+*.bak_*
+.vscode/
+.idea/
+.cursor/
+.agents/
+archive/
+ReClass.NET/
+ReClass.NET-MCP/

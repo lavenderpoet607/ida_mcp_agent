@@ -1,0 +1,47 @@
+{
+  "active_agent": "Antigravity",
+  "agents": {
+    "Antigravity": {
+      "name": "Antigravity Agent",
+      "tag": "Google DeepMind AGY",
+      "type": "external_mcp",
+      "desc": "Autonomous Pair-Programming & RE Agent connecting via ida-mcp.json",
+      "config_file": "c:\\Users\\user\\Documents\\project\\ida-mcp.json",
+      "instructions": "Running with Antigravity. Prompts and context are synced automatically to project files."
+    },
+    "Claude": {
+      "name": "Claude Desktop / Claude Code",
+      "tag": "Anthropic Claude 3.7",
+      "type": "external_mcp",
+      "desc": "Anthropic Claude connected via claude_desktop_config.json",
+      "config_path": "%APPDATA%\\Claude\\claude_desktop_config.json",
+      "instructions": "Add the MCP server block to claude_desktop_config.json, then restart Claude."
+    },
+    "Cursor": {
+      "name": "Cursor IDE / Windsurf",
+      "tag": "Cursor IDE",
+      "type": "external_mcp",
+      "desc": "AI Editor with built-in MCP Client support",
+      "config_path": ".cursor/mcp.json",
+      "instructions": "Add to .cursor/mcp.json in your workspace root."
+    },
+    "Direct_API": {
+      "name": "Direct AI API",
+      "tag": "In-IDA Direct LLM",
+      "type": "direct_llm",
+      "provider": "Gemini",
+      "model": "gemini-2.0-flash",
+      "api_key": "",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta",
+      "ollama_url": "http://localhost:11434/v1",
+      "desc": "Direct query inside IDA Pro using Gemini, OpenAI, Claude, DeepSeek, or Ollama"
+    },
+    "Local_Script": {
+      "name": "ida_mcp_agent (Python)",
+      "tag": "Autonomous Script",
+      "type": "local_script",
+      "script_path": "c:\\Users\\user\\Documents\\project\\ida_mcp_agent\\agent_runner.py",
+      "desc": "Local autonomous pointer resolver & decompilation agent"
+    }
+  }
+}
