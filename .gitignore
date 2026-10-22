@@ -53,4 +53,6 @@ DecrpytXOR.py
 *DecrpytXOR*
 patch_and_comment_xor.py
 *patch_and_comment*
+assets/*
+!assets/banner.png
 
