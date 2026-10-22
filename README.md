@@ -120,7 +120,6 @@ ida_mcp_agent/
 ├── ida_client.py             Python client module for interacting with IDA MCP
 ├── pointer_resolver.py       Automated pointer resolution and xref analysis engine
 ├── agent_runner.py           Standalone autonomous runner script
-├── DecrpytXOR.py             Helper script for XOR string decryption
 ├── patch_and_comment_xor.py  Helper script for XOR patching and database annotation
 ├── bin/
 │   ├── ReClassMCP.dll        Compiled ReClass.NET plugin DLL (.NET)
