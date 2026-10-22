@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="IDA Pro & ReClass.NET MCP Agent Banner" width="100%">
+</p>
+
 # IDA Pro & ReClass.NET MCP Agent
 
 A Model Context Protocol (MCP) integration bridge connecting modern AI coding and reverse engineering assistants (Google DeepMind Antigravity, Anthropic Claude Desktop / Claude Code, Cursor, Windsurf) directly to **IDA Pro** and **ReClass.NET**.
