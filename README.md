@@ -30,10 +30,16 @@ A Model Context Protocol (MCP) integration bridge connecting modern AI coding an
 
 ### 1. Standard Installation (IDA Pro MCP Only)
 
-Run the following command in PowerShell:
+Run from Command Prompt (CMD) or PowerShell:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/lavenderpoet607/ida_mcp_agent/main/install.ps1 | iex"
+```
+
+Or directly inside an existing PowerShell window:
+
+```powershell
+irm https://raw.githubusercontent.com/lavenderpoet607/ida_mcp_agent/main/install.ps1 | iex
 ```
 
 Or run locally from the repository root:
@@ -47,7 +53,19 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 Pass the `-InstallReClass` flag to include the ReClass.NET plugin and bridge server:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "& { $(irm https://raw.githubusercontent.com/lavenderpoet607/ida_mcp_agent/main/install.ps1) } -InstallReClass"
+powershell -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/lavenderpoet607/ida_mcp_agent/main/install.ps1))) -InstallReClass"
+```
+
+Or directly inside an existing PowerShell window:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/lavenderpoet607/ida_mcp_agent/main/install.ps1))) -InstallReClass
+```
+
+Or using an environment variable with `iex`:
+
+```powershell
+$env:INSTALL_RECLASS = 1; irm https://raw.githubusercontent.com/lavenderpoet607/ida_mcp_agent/main/install.ps1 | iex
 ```
 
 Or run locally:

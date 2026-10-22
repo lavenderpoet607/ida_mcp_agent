@@ -8,7 +8,9 @@ param(
     [switch]$WithReClass = $false
 )
 
-$ErrorActionPreference = "Stop"
+if ($env:INSTALL_RECLASS -eq "1" -or $env:INSTALL_RECLASS -eq "true" -or $env:INSTALLRECLASS -eq "1") {
+    $InstallReClass = $true
+}
 
 $enableReclass = $InstallReClass -or $WithReClass
 
