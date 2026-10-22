@@ -4,7 +4,14 @@ class PointerResolver:
     def __init__(self, client):
         self.client = client
 
-    def analyze_and_resolve(self, target_ea="0x1d88ec", auto_annotate=True):
+    def analyze_and_resolve(self, target_ea=None, auto_annotate=True):
+        if not target_ea or target_ea == "auto":
+            cur_fn = self.client.get_current_function()
+            if cur_fn and isinstance(cur_fn, dict) and "start" in cur_fn:
+                target_ea = hex(cur_fn["start"])
+            else:
+                cur_ea = self.client.get_current_address()
+                target_ea = hex(cur_ea) if isinstance(cur_ea, int) else (str(cur_ea) if cur_ea else "0x0")
         func_info = self.client.get_function(target_ea)
         if not func_info:
             return {"error": "Fungsi tidak ditemukan", "target": target_ea}

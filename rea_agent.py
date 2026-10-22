@@ -4,6 +4,16 @@ import sys
 if sys.version_info < (3, 11):
     raise RuntimeError("Python 3.11 or higher is required for the MCP plugin")
 
+for _pkg in ["requests", "ida_pro_mcp", "mcp"]:
+    try:
+        __import__(_pkg)
+    except ImportError:
+        try:
+            import subprocess
+            subprocess.run([sys.executable, "-m", "pip", "install", _pkg], capture_output=True, timeout=60)
+        except Exception:
+            pass
+
 import json
 import struct
 import threading
@@ -2753,14 +2763,10 @@ class McpDashboardState:
             pass
         this_dir = os.path.dirname(os.path.abspath(__file__))
         if os.path.basename(this_dir).lower() == "plugins":
-            doc_proj = os.path.expanduser(r"~\Documents\project\ida_mcp_agent")
+            doc_proj = os.path.join(os.path.expanduser("~"), "Documents", "ida_mcp_agent")
             if os.path.isdir(doc_proj):
                 cls.workspace_dir = doc_proj
                 return doc_proj
-            doc_base = os.path.expanduser(r"~\Documents\project")
-            if os.path.isdir(doc_base):
-                cls.workspace_dir = doc_base
-                return doc_base
             parent_dir = os.path.dirname(this_dir)
             if os.path.isdir(parent_dir):
                 cls.workspace_dir = parent_dir
@@ -3147,8 +3153,8 @@ class McpDashboardState:
             candidates = [
                 cls.config_file_path,
                 os.path.join(cls.get_default_workspace_dir(), "ida_agent_config.json"),
-                os.path.expanduser(r"~\Documents\project\ida_mcp_agent\ida_agent_config.json"),
-                os.path.expanduser(r"~\Documents\project\ida_agent_config.json"),
+                os.path.join(os.path.expanduser("~"), "Documents", "ida_mcp_agent", "ida_agent_config.json"),
+                os.path.join(os.path.expanduser("~"), ".ida_agent_config.json"),
                 os.path.join(os.path.dirname(os.path.abspath(__file__)), "ida_agent_config.json")
             ]
             cfg_file = None
@@ -4087,6 +4093,14 @@ class McpDashboardState:
         except Exception:
             pass
 
+        target_mod = "target.so"
+        try:
+            binfo = cls.get_binary_info()
+            if binfo and binfo.get("name") and binfo["name"] != "No binary loaded":
+                target_mod = binfo["name"]
+        except Exception:
+            pass
+
         if any(w in q_lower for w in ["bypass", "hook", "frida", "patch", "interceptor"]):
             if lang == "id":
                 if sem["is_singleton"]:
@@ -4095,7 +4109,7 @@ class McpDashboardState:
                         <b style="color: #61afef;">🎯 Strategi Hooking Frida untuk Singleton <code>{fname}</code> (Disiapkan untuk {agent_name}):</b><br/>
                         Karena fungsi ini mengembalikan pointer instance objek tunggal, kita dapat meng-intercept return value untuk mengakses instance memori:<br/>
                         <pre style="background-color: #14141c; padding: 10px; border-radius: 6px; color: #98c379; font-family: monospace; font-size: 11px; margin: 6px 0;">
-var targetAddr = Module.findExportByName("libanogs.so", "{fname}") || ptr("{ea_str}");
+var targetAddr = Module.findExportByName("{target_mod}", "{fname}") || ptr("{ea_str}");
 Interceptor.attach(targetAddr, {{
     onEnter: function(args) {{
         console.log("[+] {fname} dipanggil");
@@ -4118,7 +4132,7 @@ Interceptor.attach(targetAddr, {{
                         <ol style="margin: 4px 0 6px 18px; padding: 0;">
                             <li><b>Frida Interceptor Hook:</b>
                                 <pre style="background-color: #14141c; padding: 8px; border-radius: 4px; color: #98c379; font-family: monospace; font-size: 11px; margin: 4px 0;">
-Interceptor.attach(Module.findExportByName("libanogs.so", "{fname}") || ptr("{ea_str}"), {{
+Interceptor.attach(Module.findExportByName("{target_mod}", "{fname}") || ptr("{ea_str}"), {{
     onEnter: function(args) {{
         console.log("[*] {fname} security check entered");
     }},
@@ -4156,7 +4170,7 @@ Interceptor.attach(ptr("{ea_str}"), {{
                         <b style="color: #61afef;">🎯 Frida Hooking Strategy for Singleton <code>{fname}</code> (Prepared for {agent_name}):</b><br/>
                         Since this routine returns a singleton instance object pointer, intercept the return value to explore instance memory:<br/>
                         <pre style="background-color: #14141c; padding: 10px; border-radius: 6px; color: #98c379; font-family: monospace; font-size: 11px; margin: 6px 0;">
-var targetAddr = Module.findExportByName("libanogs.so", "{fname}") || ptr("{ea_str}");
+var targetAddr = Module.findExportByName("{target_mod}", "{fname}") || ptr("{ea_str}");
 Interceptor.attach(targetAddr, {{
     onEnter: function(args) {{
         console.log("[+] {fname} called");
@@ -4179,7 +4193,7 @@ Interceptor.attach(targetAddr, {{
                         <ol style="margin: 4px 0 6px 18px; padding: 0;">
                             <li><b>Frida Interceptor Hook:</b>
                                 <pre style="background-color: #14141c; padding: 8px; border-radius: 4px; color: #98c379; font-family: monospace; font-size: 11px; margin: 4px 0;">
-Interceptor.attach(Module.findExportByName("libanogs.so", "{fname}") || ptr("{ea_str}"), {{
+Interceptor.attach(Module.findExportByName("{target_mod}", "{fname}") || ptr("{ea_str}"), {{
     onEnter: function(args) {{
         console.log("[*] {fname} security check entered");
     }},
@@ -4756,7 +4770,16 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         self.title_lbl.setStyleSheet("font-size: 13px; font-weight: 800; color: #8B5CF6; letter-spacing: 0.8px; padding: 2px 6px; background-color: #171D28; border: 1px solid #283142; border-radius: 4px;")
         header_bar.addWidget(self.title_lbl)
 
-        self.bin_lbl = QtWidgets.QLabel("libanogs.so (ARM64) | 5372 " + McpDashboardState.t("funcs_suffix"))
+        binfo = McpDashboardState.get_binary_info() if "McpDashboardState" in globals() else {}
+        bname = binfo.get("name", "") if binfo else ""
+        bproc = binfo.get("proc", "Unknown") if binfo else "Unknown"
+        bfuncs = binfo.get("total_funcs", 0) if binfo else 0
+        if bname and bname != "No binary loaded":
+            bin_title = f"{bname} ({bproc}) | {bfuncs} " + McpDashboardState.t("funcs_suffix")
+        else:
+            lang = McpDashboardState.get_language() if "McpDashboardState" in globals() else "en"
+            bin_title = "Tidak ada biner aktif" if lang == "id" else "No active binary"
+        self.bin_lbl = QtWidgets.QLabel(bin_title)
         self.bin_lbl.setStyleSheet("color: #E2E8F0; font-size: 12px; font-weight: 600; padding: 2px 8px; background-color: #171D28; border: 1px solid #283142; border-radius: 4px;")
         header_bar.addWidget(self.bin_lbl)
 
@@ -4826,6 +4849,15 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         t = lambda k, **kw: McpDashboardState.t(k, **kw)
         if self.title_lbl:
             self.title_lbl.setText(t("title"))
+        if self.bin_lbl:
+            binfo = McpDashboardState.get_binary_info()
+            bname = binfo.get("name", "")
+            bproc = binfo.get("proc", "Unknown")
+            bfuncs = binfo.get("total_funcs", 0)
+            if bname and bname != "No binary loaded":
+                self.bin_lbl.setText(f"{bname} ({bproc}) | {bfuncs} " + t("funcs_suffix"))
+            else:
+                self.bin_lbl.setText("Tidak ada biner aktif" if lang == "id" else "No active binary")
         if self.tabs:
             self.tabs.setTabText(0, t("tab_mcp"))
             self.tabs.setTabText(1, t("tab_copilot"))
@@ -6171,8 +6203,8 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                     "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
                     "• Tambahkan blok konfigurasi ini ke <span style='font-family: monospace; color: #38BDF8;'>%APPDATA%\\Claude\\claude_desktop_config.json</span>:<br/>"
                     "<pre style='background: #11151D; border: 1px solid #283142; border-radius: 4px; padding: 6px; color: #34D399; font-size: 11px;'>"
-                    '{\\n  "mcpServers": {\\n    "ida-pro": {\\n      "command": "C:\\\\Python314\\\\python.exe",\\n'
-                    '      "args": ["C:\\\\Users\\\\user\\\\AppData\\\\Roaming\\\\Python\\\\Python314\\\\site-packages\\\\ida_pro_mcp\\\\server.py", "--ida-rpc", "http://127.0.0.1:13337"]\\n'
+                    '{\\n  "mcpServers": {\\n    "ida-pro": {\\n      "command": "python",\\n'
+                    '      "args": ["-m", "ida_pro_mcp.server", "--ida-rpc", "http://127.0.0.1:13337"]\\n'
                     '    }\\n  }\\n}'
                     "</pre>"
                     "</div>"
@@ -6234,8 +6266,8 @@ class McpDashboardTab(ida_kernwin.PluginForm):
                     "<div style='margin-top: 4px; color: #E8EDF5; line-height: 140%;'>"
                     "• Add this configuration block to <span style='font-family: monospace; color: #38BDF8;'>%APPDATA%\\Claude\\claude_desktop_config.json</span>:<br/>"
                     "<pre style='background: #11151D; border: 1px solid #283142; border-radius: 4px; padding: 6px; color: #34D399; font-size: 11px;'>"
-                    '{\\n  "mcpServers": {\\n    "ida-pro": {\\n      "command": "C:\\\\Python314\\\\python.exe",\\n'
-                    '      "args": ["C:\\\\Users\\\\user\\\\AppData\\\\Roaming\\\\Python\\\\Python314\\\\site-packages\\\\ida_pro_mcp\\\\server.py", "--ida-rpc", "http://127.0.0.1:13337"]\\n'
+                    '{\\n  "mcpServers": {\\n    "ida-pro": {\\n      "command": "python",\\n'
+                    '      "args": ["-m", "ida_pro_mcp.server", "--ida-rpc", "http://127.0.0.1:13337"]\\n'
                     '    }\\n  }\\n}'
                     "</pre>"
                     "</div>"
@@ -6375,9 +6407,10 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         cfg_snippet = {
             "mcpServers": {
                 "ida-pro": {
-                    "command": "C:\\Python314\\python.exe",
+                    "command": "python",
                     "args": [
-                        "C:\\Users\\user\\AppData\\Roaming\\Python\\Python314\\site-packages\\ida_pro_mcp\\server.py",
+                        "-m",
+                        "ida_pro_mcp.server",
                         "--ida-rpc",
                         "http://127.0.0.1:13337"
                     ]
@@ -6406,7 +6439,7 @@ class McpDashboardTab(ida_kernwin.PluginForm):
         func_info = None
         if "McpDashboardState" in globals():
             func_info = McpDashboardState.get_current_function_details()
-        target_addr = func_info["start"] if func_info and "start" in func_info else "0x1d88ec"
+        target_addr = func_info["start"] if func_info and "start" in func_info else "auto"
         script_path = McpDashboardState.get_script_path() if "McpDashboardState" in globals() else ""
         run_cwd = os.path.dirname(script_path) if script_path and os.path.isfile(script_path) else (McpDashboardState.get_default_workspace_dir() if "McpDashboardState" in globals() else "")
 

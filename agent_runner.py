@@ -3,12 +3,23 @@ import json
 from ida_client import IdaClient
 from pointer_resolver import PointerResolver
 
-def run_agent(target_address="0x1d88ec"):
+def run_agent(target_address=None):
     client = IdaClient()
     meta = client.get_metadata()
     if not meta:
         print("[-] Gagal terhubung ke IDA Pro MCP Server di port 13337")
         return
+
+    if not target_address or target_address == "auto":
+        cur_fn = client.get_current_function()
+        if cur_fn and isinstance(cur_fn, dict) and "start" in cur_fn:
+            target_address = hex(cur_fn["start"])
+        else:
+            cur_ea = client.get_current_address()
+            if cur_ea:
+                target_address = hex(cur_ea) if isinstance(cur_ea, int) else str(cur_ea)
+            else:
+                target_address = "0x0"
 
     print("==================================================")
     print("  IDA PRO MCP AGENT - AUTOMATED POINTER RESOLVER  ")
@@ -58,5 +69,5 @@ def run_agent(target_address="0x1d88ec"):
     print("\n[+] Status: Seluruh pointer dan komentar berhasil ditambahkan ke database IDA Pro secara otomatis!")
 
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else "0x1d88ec"
+    target = sys.argv[1] if len(sys.argv) > 1 else None
     run_agent(target)

@@ -31,14 +31,15 @@ Write-Host "[2/5] Dependencies berhasil diinstall." -ForegroundColor Green
 if (-not $InstallDir) {
     if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "rea_agent.py"))) {
         $InstallDir = $PSScriptRoot
-    } elseif (Test-Path "$env:USERPROFILE\Documents\project\ida_mcp_agent\rea_agent.py") {
-        $InstallDir = "$env:USERPROFILE\Documents\project\ida_mcp_agent"
     } else {
         $winDir = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::Windows)
         $currentPath = $PWD.Path
-        if (-not $currentPath -or $currentPath.StartsWith($winDir, [System.StringComparison]::OrdinalIgnoreCase)) {
-            $docDir = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::MyDocuments)
-            $InstallDir = Join-Path $docDir "ida_mcp_agent"
+        $docDir = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::MyDocuments)
+        $docAgent = Join-Path $docDir "ida_mcp_agent"
+        if ($currentPath -and (Test-Path (Join-Path $currentPath "rea_agent.py"))) {
+            $InstallDir = $currentPath
+        } elseif (-not $currentPath -or $currentPath.StartsWith($winDir, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $InstallDir = $docAgent
         } else {
             $InstallDir = Join-Path $currentPath "ida_mcp_agent"
         }
@@ -55,7 +56,6 @@ if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "rea_agent.py"))) {
     $baseDir = $InstallDir
 }
 
-
 if (-not $isLocal) {
     Write-Host "[3/5] Mengunduh asset dari GitHub: $Repo ($Branch)..." -ForegroundColor Yellow
     if (-not (Test-Path $InstallDir)) {
@@ -67,7 +67,11 @@ if (-not $isLocal) {
         @{ Url = "$rawBase/rea_agent.py"; Out = (Join-Path $InstallDir "rea_agent.py") },
         @{ Url = "$rawBase/ida_agent_config.json"; Out = (Join-Path $InstallDir "ida_agent_config.json") },
         @{ Url = "$rawBase/ida-mcp.json"; Out = (Join-Path $InstallDir "ida-mcp.json") },
-        @{ Url = "$rawBase/idapythonrc.py"; Out = (Join-Path $InstallDir "idapythonrc.py") }
+        @{ Url = "$rawBase/idapythonrc.py"; Out = (Join-Path $InstallDir "idapythonrc.py") },
+        @{ Url = "$rawBase/agent_runner.py"; Out = (Join-Path $InstallDir "agent_runner.py") },
+        @{ Url = "$rawBase/pointer_resolver.py"; Out = (Join-Path $InstallDir "pointer_resolver.py") },
+        @{ Url = "$rawBase/ida_client.py"; Out = (Join-Path $InstallDir "ida_client.py") },
+        @{ Url = "$rawBase/requirements.txt"; Out = (Join-Path $InstallDir "requirements.txt") }
     )
 
     if ($enableReclass) {
